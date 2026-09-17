@@ -1,0 +1,16 @@
+# Environment variables (chaves de API)
+.env
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.tmp
+
+# Virtual envs
+venv/
+env/
+.venv/
+
+# Temporary test files
+temp_tasks.json
