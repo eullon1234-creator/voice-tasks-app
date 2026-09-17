@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 import os
 import json
 from pathlib import Path
@@ -69,7 +69,7 @@ class TestAIMemoryEngine(unittest.TestCase):
         mock_completion = MagicMock()
         mock_completion.choices = [
             MagicMock(message=MagicMock(content=json.dumps({
-                "new_preferences": ["Gosta de tomar café sem açúcar após o almoço"],
+                "new_preferences": ["Gosta de tomar cafe sem acucar"],
                 "new_work_context": [],
                 "new_personal_habits": [],
                 "new_goals": []
@@ -78,9 +78,9 @@ class TestAIMemoryEngine(unittest.TestCase):
         mock_groq._client.chat.completions.create.return_value = mock_completion
 
         engine = AIMemoryEngine(groq_client=mock_groq, memory_file=self.test_file)
-        engine._extract_facts_worker("Hoje comecei a tomar café sem açúcar depois do almoço e curti", "Legal!")
+        engine._extract_facts_worker("Hoje comecei a tomar cafe sem acucar", "Legal!")
 
-        self.assertIn("Gosta de tomar café sem açúcar após o almoço", engine.memory["preferences"])
+        self.assertIn("Gosta de tomar cafe sem acucar", engine.memory["preferences"])
 
     def test_generate_daily_mission(self):
         mock_groq = MagicMock()

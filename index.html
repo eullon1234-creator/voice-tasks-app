@@ -681,11 +681,11 @@
       padding-bottom: 14px;
     }
     .chat-bubble {
-      max-width: 82%;
-      padding: 10px 14px;
+      max-width: 85%;
+      padding: 12px 16px;
       border-radius: 14px;
-      font-size: 13px;
-      line-height: 1.4;
+      font-size: var(--font-size, 15px);
+      line-height: 1.45;
       word-break: break-word;
     }
     .chat-bubble.user {
@@ -708,9 +708,9 @@
       background: #065f46;
       color: #34d399;
       border: 1px solid #10b981;
-      padding: 6px 12px;
+      padding: 7px 14px;
       border-radius: 8px;
-      font-size: 11px;
+      font-size: calc(var(--font-size, 15px) - 2px);
       font-weight: 700;
       cursor: pointer;
     }
@@ -920,8 +920,8 @@
 
       <!-- Card de Insight Diário -->
       <div class="copilot-insight-box">
-        <div style="font-size: 10px; font-weight: 800; color: #fbbf24; margin-bottom: 4px;">✨ INSIGHT DO COPILOTO</div>
-        <div id="copilotInsightText" style="font-size: 12px; line-height: 1.4; color: var(--text);">Analisando suas rotinas e histórico...</div>
+        <div style="font-size: 11px; font-weight: 800; color: #fbbf24; margin-bottom: 4px;">✨ INSIGHT DO COPILOTO</div>
+        <div id="copilotInsightText" style="font-size: calc(var(--font-size, 15px) - 1px); line-height: 1.45; color: var(--text);">Analisando suas rotinas e histórico...</div>
         <div id="copilotInsightAction" style="margin-top: 8px;"></div>
       </div>
 
@@ -930,7 +930,7 @@
 
       <!-- Barra Inferior de Envio do Chat -->
       <div class="chat-bottom-bar">
-        <input type="text" class="task-input" id="chatInput" placeholder="Fale com o Copiloto (o que gosta, rotinas)..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+        <input type="text" class="task-input" id="chatInput" style="font-size: var(--font-size, 15px);" placeholder="Fale com o Copiloto (o que gosta, rotinas)..." onkeypress="if(event.key==='Enter') sendChatMessage()">
         <button class="chat-mic-btn" id="chatMicBtn" onclick="toggleChatMic()">🎙</button>
         <button class="chat-send-btn" onclick="sendChatMessage()">➤</button>
       </div>

@@ -48,6 +48,7 @@ class AppWindow(ctk.CTk):
         self._stopwatch_timer = None
         self._card_widgets = []
         self.selected_category = "Todas"
+        self.current_tab = "tasks"
 
         # Tamanho de Fonte Configurável & Persistente
         self.font_size = self._load_font_setting()
@@ -342,6 +343,7 @@ class AppWindow(ctk.CTk):
     def _on_tab_change(self, selected_tab: str):
         """Alterna entre as abas de Tarefas, Relatórios e Copiloto IA."""
         if "Tarefas" in selected_tab:
+            self.current_tab = "tasks"
             self.reports_container.pack_forget()
             self.copilot_container.pack_forget()
             self.streak_card.pack(fill="x", padx=14, pady=(2, 4), after=self.tab_nav)
@@ -352,6 +354,7 @@ class AppWindow(ctk.CTk):
             self.scroll_container.pack(fill="both", expand=True, padx=10, pady=4, after=self.feedback_banner)
             self._refresh_tasks_view()
         elif "Relatórios" in selected_tab:
+            self.current_tab = "reports"
             self.streak_card.pack_forget()
             self.category_bar.pack_forget()
             self.voice_card.pack_forget()
@@ -362,6 +365,7 @@ class AppWindow(ctk.CTk):
             self._refresh_reports_view()
         else:
             # Copiloto IA
+            self.current_tab = "copilot"
             self.streak_card.pack_forget()
             self.category_bar.pack_forget()
             self.voice_card.pack_forget()
@@ -369,6 +373,8 @@ class AppWindow(ctk.CTk):
             self.bottom_bar.pack_forget()
             self.reports_container.pack_forget()
             self.copilot_container.pack(fill="both", expand=True, padx=10, pady=4, after=self.tab_nav)
+            if hasattr(self, "lbl_copilot_font") and self.lbl_copilot_font.winfo_exists():
+                self.lbl_copilot_font.configure(text=f"{self.font_size}px")
             self._refresh_copilot_view()
 
     def _refresh_reports_view(self):
@@ -491,24 +497,24 @@ class AppWindow(ctk.CTk):
 
     def _build_copilot_ui(self):
         """Constrói a interface da aba Copiloto IA."""
-        # 1. Topo: Título e Botão Cérebro da IA
+        # 1. Topo: Título, Zoom de Fonte e Botão Cérebro da IA
         top_bar = ctk.CTkFrame(self.copilot_container, fg_color="transparent")
         top_bar.pack(fill="x", padx=6, pady=(4, 6))
 
         title_lbl = ctk.CTkLabel(
             top_bar,
-            text="💬 Copiloto IA (Memória Viva)",
-            font=("Segoe UI", 12, "bold"),
+            text="💬 Copiloto IA",
+            font=("Segoe UI", 14, "bold"),
             text_color=THEME["text_primary"]
         )
         title_lbl.pack(side="left")
 
         brain_btn = ctk.CTkButton(
             top_bar,
-            text="🧠 Memória da IA",
-            font=("Segoe UI", 10, "bold"),
-            width=105,
-            height=26,
+            text="🧠 Memória",
+            font=("Segoe UI", 11, "bold"),
+            width=90,
+            height=28,
             corner_radius=8,
             fg_color="#1e1b4b",
             hover_color="#312e81",
@@ -518,6 +524,47 @@ class AppWindow(ctk.CTk):
             command=self._show_ai_memory_modal
         )
         brain_btn.pack(side="right")
+
+        # Controles de Zoom A- / A+ no Copiloto
+        copilot_font_ctrl = ctk.CTkFrame(top_bar, fg_color="transparent")
+        copilot_font_ctrl.pack(side="right", padx=(0, 8))
+
+        btn_c_dec = ctk.CTkButton(
+            copilot_font_ctrl,
+            text="A-",
+            font=("Segoe UI", 10, "bold"),
+            width=26,
+            height=24,
+            corner_radius=4,
+            fg_color=THEME["card_bg"],
+            hover_color=THEME["card_hover"],
+            text_color=THEME["text_secondary"],
+            command=self._decrease_font_size
+        )
+        btn_c_dec.pack(side="left", padx=(0, 2))
+
+        self.lbl_copilot_font = ctk.CTkLabel(
+            copilot_font_ctrl,
+            text=f"{self.font_size}px",
+            font=("Segoe UI", 11, "bold"),
+            text_color=THEME["accent"],
+            width=36
+        )
+        self.lbl_copilot_font.pack(side="left")
+
+        btn_c_inc = ctk.CTkButton(
+            copilot_font_ctrl,
+            text="A+",
+            font=("Segoe UI", 10, "bold"),
+            width=26,
+            height=24,
+            corner_radius=4,
+            fg_color=THEME["card_bg"],
+            hover_color=THEME["card_hover"],
+            text_color=THEME["text_secondary"],
+            command=self._increase_font_size
+        )
+        btn_c_inc.pack(side="left", padx=(2, 0))
 
         # 2. Card de Insight / Dica do Dia da IA
         self.copilot_insight_card = ctk.CTkFrame(
@@ -532,13 +579,14 @@ class AppWindow(ctk.CTk):
         in_top = ctk.CTkFrame(self.copilot_insight_card, fg_color="transparent")
         in_top.pack(fill="x", padx=10, pady=(6, 2))
 
-        in_title = ctk.CTkLabel(in_top, text="✨ INSIGHT DO COPILOTO", font=("Segoe UI", 10, "bold"), text_color="#fbbf24")
+        in_title = ctk.CTkLabel(in_top, text="✨ INSIGHT DO COPILOTO", font=("Segoe UI", 11, "bold"), text_color="#fbbf24")
         in_title.pack(side="left")
 
+        insight_font = max(13, self.font_size - 1)
         self.insight_text_lbl = ctk.CTkLabel(
             self.copilot_insight_card,
             text="Analisando suas anotações e hábitos para gerar sua sugestão...",
-            font=("Segoe UI", 11),
+            font=("Segoe UI", insight_font),
             text_color=THEME["text_primary"],
             wraplength=340,
             justify="left"
@@ -558,17 +606,18 @@ class AppWindow(ctk.CTk):
         self.chat_scroll.pack(fill="both", expand=True, padx=2, pady=4)
 
         # 4. Barra Inferior de Envio do Chat
-        chat_bar = ctk.CTkFrame(self.copilot_container, fg_color=THEME["card_bg"], height=48, corner_radius=10)
+        chat_bar = ctk.CTkFrame(self.copilot_container, fg_color=THEME["card_bg"], height=52, corner_radius=10)
         chat_bar.pack(fill="x", side="bottom", padx=2, pady=(4, 2))
 
         cb_content = ctk.CTkFrame(chat_bar, fg_color="transparent")
         cb_content.pack(fill="x", padx=8, pady=6)
 
+        entry_font = max(13, self.font_size - 1)
         self.chat_entry = ctk.CTkEntry(
             cb_content,
-            placeholder_text="Fale com o Copiloto (o que está fazendo, planos)...",
-            font=("Segoe UI", 11),
-            height=34,
+            placeholder_text="Fale com o Copiloto (planos, dúvidas)...",
+            font=("Segoe UI", entry_font),
+            height=38,
             fg_color="#121214",
             border_color=THEME["border"],
             text_color=THEME["text_primary"]
@@ -579,9 +628,9 @@ class AppWindow(ctk.CTk):
         self.chat_mic_btn = ctk.CTkButton(
             cb_content,
             text="🎙",
-            width=36,
-            height=34,
-            font=("Segoe UI", 13),
+            width=38,
+            height=38,
+            font=("Segoe UI", 14),
             fg_color="#27272a",
             hover_color=THEME["accent"],
             command=self._copilot_voice_input
@@ -591,9 +640,9 @@ class AppWindow(ctk.CTk):
         self.chat_send_btn = ctk.CTkButton(
             cb_content,
             text="➤",
-            width=36,
-            height=34,
-            font=("Segoe UI", 13, "bold"),
+            width=38,
+            height=38,
+            font=("Segoe UI", 14, "bold"),
             fg_color=THEME["accent"],
             hover_color=THEME["accent_hover"],
             command=self._send_copilot_message
@@ -633,11 +682,12 @@ class AppWindow(ctk.CTk):
 
         task = mission.get("task")
         if task and task.get("title"):
+            btn_font = max(11, self.font_size - 2)
             accept_btn = ctk.CTkButton(
                 self.insight_action_frame,
                 text=f"➕ Adicionar Sugestão: {task['title']}",
-                font=("Segoe UI", 10, "bold"),
-                height=26,
+                font=("Segoe UI", btn_font, "bold"),
+                height=30,
                 fg_color="#065f46",
                 hover_color="#047857",
                 text_color="#34d399",
@@ -650,7 +700,7 @@ class AppWindow(ctk.CTk):
     def _render_chat_bubble(self, role: str, content: str, suggested_task: Optional[Dict[str, Any]] = None):
         is_user = (role == "user")
         row = ctk.CTkFrame(self.chat_scroll, fg_color="transparent")
-        row.pack(fill="x", pady=4)
+        row.pack(fill="x", pady=5)
 
         bubble = ctk.CTkFrame(
             row,
@@ -661,28 +711,32 @@ class AppWindow(ctk.CTk):
         )
         bubble.pack(side="right" if is_user else "left", padx=8, pady=2)
 
+        chat_font_size = max(14, self.font_size)
         lbl = ctk.CTkLabel(
             bubble,
             text=content,
-            font=("Segoe UI", 11),
+            font=("Segoe UI", chat_font_size),
             text_color="#ffffff" if is_user else THEME["text_primary"],
-            wraplength=260,
+            wraplength=275,
             justify="left"
         )
-        lbl.pack(padx=10, pady=8)
+        lbl.pack(padx=12, pady=10)
 
         if suggested_task and suggested_task.get("title"):
+            st_font = max(11, chat_font_size - 2)
             st_btn = ctk.CTkButton(
                 bubble,
                 text=f"➕ Criar: {suggested_task['title']}",
-                font=("Segoe UI", 10, "bold"),
-                height=24,
+                font=("Segoe UI", st_font, "bold"),
+                height=28,
                 fg_color="#065f46",
                 hover_color="#047857",
                 text_color="#34d399",
+                border_width=1,
+                border_color="#10b981",
                 command=lambda: self._accept_suggested_task(suggested_task)
             )
-            st_btn.pack(fill="x", padx=10, pady=(0, 8))
+            st_btn.pack(fill="x", padx=12, pady=(0, 10))
 
     def _send_copilot_message(self):
         text = self.chat_entry.get().strip()
@@ -746,7 +800,7 @@ class AppWindow(ctk.CTk):
         """Abre janela com tudo o que a IA já aprendeu sobre o Eullon."""
         win = ctk.CTkToplevel(self)
         win.title("🧠 Memória da IA • O que ela sabe sobre você")
-        win.geometry("380x520")
+        win.geometry("420x560")
         win.configure(fg_color=THEME["bg_dark"])
         win.attributes("-topmost", True)
 
@@ -758,16 +812,18 @@ class AppWindow(ctk.CTk):
         def make_section(title, icon, items):
             sec_f = ctk.CTkFrame(scroll, fg_color=THEME["card_bg"], border_width=1, border_color=THEME["border"], corner_radius=10)
             sec_f.pack(fill="x", pady=6)
-            h = ctk.CTkLabel(sec_f, text=f"{icon} {title}", font=("Segoe UI", 11, "bold"), text_color=THEME["accent"])
-            h.pack(padx=10, pady=(8, 4), anchor="w")
+            sec_font = max(13, self.font_size)
+            h = ctk.CTkLabel(sec_f, text=f"{icon} {title}", font=("Segoe UI", sec_font, "bold"), text_color=THEME["accent"])
+            h.pack(padx=12, pady=(10, 4), anchor="w")
             if not items:
-                lbl = ctk.CTkLabel(sec_f, text="Ainda aprendendo...", font=("Segoe UI", 10, "italic"), text_color=THEME["text_muted"])
-                lbl.pack(padx=12, pady=(0, 6), anchor="w")
+                lbl = ctk.CTkLabel(sec_f, text="Ainda aprendendo...", font=("Segoe UI", max(11, sec_font - 2), "italic"), text_color=THEME["text_muted"])
+                lbl.pack(padx=14, pady=(0, 8), anchor="w")
             else:
+                item_font = max(12, self.font_size - 1)
                 for it in items:
-                    it_lbl = ctk.CTkLabel(sec_f, text=f"• {it}", font=("Segoe UI", 10), text_color=THEME["text_primary"], wraplength=310, justify="left")
-                    it_lbl.pack(padx=12, pady=2, anchor="w")
-            ctk.CTkFrame(sec_f, height=4, fg_color="transparent").pack()
+                    it_lbl = ctk.CTkLabel(sec_f, text=f"• {it}", font=("Segoe UI", item_font), text_color=THEME["text_primary"], wraplength=350, justify="left")
+                    it_lbl.pack(padx=14, pady=3, anchor="w")
+            ctk.CTkFrame(sec_f, height=6, fg_color="transparent").pack()
 
         make_section("Contexto de Trabalho", "💼", mem.get("work_context", []))
         make_section("Gostos & Preferências", "⚙️", mem.get("preferences", []))
@@ -785,8 +841,8 @@ class AppWindow(ctk.CTk):
         add_btn = ctk.CTkButton(
             scroll,
             text="＋ Ensinar Novo Fato para a IA",
-            font=("Segoe UI", 11, "bold"),
-            height=34,
+            font=("Segoe UI", 12, "bold"),
+            height=36,
             fg_color=THEME["accent"],
             hover_color=THEME["accent_hover"],
             command=add_fact
@@ -1211,7 +1267,7 @@ class AppWindow(ctk.CTk):
                 with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     val = int(data.get("font_size", DEFAULT_FONT_SIZE))
-                    return max(12, min(24, val))
+                    return max(12, min(28, val))
         except Exception:
             pass
         return DEFAULT_FONT_SIZE
@@ -1224,17 +1280,35 @@ class AppWindow(ctk.CTk):
             pass
 
     def _increase_font_size(self):
-        if self.font_size < 24:
+        if self.font_size < 28:
             self.font_size += 2
             self._save_font_setting()
-            self._refresh_tasks_view()
+            if hasattr(self, "lbl_copilot_font") and self.lbl_copilot_font.winfo_exists():
+                self.lbl_copilot_font.configure(text=f"{self.font_size}px")
+            if hasattr(self, "insight_text_lbl") and self.insight_text_lbl.winfo_exists():
+                self.insight_text_lbl.configure(font=("Segoe UI", max(13, self.font_size - 1)))
+            if hasattr(self, "chat_entry") and self.chat_entry.winfo_exists():
+                self.chat_entry.configure(font=("Segoe UI", max(13, self.font_size - 1)))
+            if getattr(self, "current_tab", "tasks") == "copilot":
+                self._refresh_copilot_view()
+            else:
+                self._refresh_tasks_view()
             self.show_feedback(f"Fonte aumentada: {self.font_size}px")
 
     def _decrease_font_size(self):
         if self.font_size > 12:
             self.font_size -= 2
             self._save_font_setting()
-            self._refresh_tasks_view()
+            if hasattr(self, "lbl_copilot_font") and self.lbl_copilot_font.winfo_exists():
+                self.lbl_copilot_font.configure(text=f"{self.font_size}px")
+            if hasattr(self, "insight_text_lbl") and self.insight_text_lbl.winfo_exists():
+                self.insight_text_lbl.configure(font=("Segoe UI", max(13, self.font_size - 1)))
+            if hasattr(self, "chat_entry") and self.chat_entry.winfo_exists():
+                self.chat_entry.configure(font=("Segoe UI", max(13, self.font_size - 1)))
+            if getattr(self, "current_tab", "tasks") == "copilot":
+                self._refresh_copilot_view()
+            else:
+                self._refresh_tasks_view()
             self.show_feedback(f"Fonte diminuída: {self.font_size}px")
 
     def _show_mobile_qr_dialog(self):
