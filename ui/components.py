@@ -34,7 +34,9 @@ class TaskItemCard(ctk.CTkFrame):
         task: Dict[str, Any],
         on_toggle: Callable[[str], None],
         on_delete: Callable[[str], None],
+        on_timer_toggle: Optional[Callable[[str], None]] = None,
         font_size: int = 15,
+        current_elapsed: int = 0,
         **kwargs
     ):
         super().__init__(master, corner_radius=8, **kwargs)
@@ -43,7 +45,9 @@ class TaskItemCard(ctk.CTkFrame):
         self.completed = task.get("completed", False)
         self.on_toggle = on_toggle
         self.on_delete = on_delete
+        self.on_timer_toggle = on_timer_toggle
         self.font_size = font_size
+        self.current_elapsed = current_elapsed
 
         # Cores conforme estado
         bg_color = THEME["card_bg"] if not self.completed else "#18181b"
@@ -91,24 +95,73 @@ class TaskItemCard(ctk.CTkFrame):
         )
         self.title_label.grid(row=0, column=1, padx=(0, 6), pady=(6, 2), sticky="w")
 
-        # 3. Sublinha: Badge de Prioridade e Due Time
+        # 3. Sublinha: Metadados (Prioridade, Horário e Cronômetro / Tempo Gasto)
         meta_frame = ctk.CTkFrame(self, fg_color="transparent")
         meta_frame.grid(row=1, column=1, padx=(0, 6), pady=(0, 6), sticky="w")
 
+        meta_font_size = max(10, self.font_size - 4)
+
         if not self.completed:
+            # Badge de Prioridade
             badge = PriorityBadge(meta_frame, priority=task.get("priority", "media"))
             badge.pack(side="left", padx=(0, 6))
 
-        due_time = task.get("due_time")
-        if due_time:
-            meta_font_size = max(10, self.font_size - 3)
-            time_label = ctk.CTkLabel(
-                meta_frame,
-                text=f"🕒 {due_time}",
-                font=("Segoe UI", meta_font_size),
-                text_color=THEME["text_muted"]
+            # Horário / Due Time
+            due_time = task.get("due_time")
+            if due_time:
+                time_label = ctk.CTkLabel(
+                    meta_frame,
+                    text=f"🕒 {due_time}",
+                    font=("Segoe UI", meta_font_size),
+                    text_color=THEME["text_muted"]
+                )
+                time_label.pack(side="left", padx=(0, 6))
+
+            # Botão de Cronômetro de Foco
+            from storage import format_stopwatch
+            is_running = task.get("timer_running", False)
+            btn_text = f"⏸ {format_stopwatch(self.current_elapsed)}" if is_running else (
+                f"▶ Continuar ({format_stopwatch(self.current_elapsed)})" if self.current_elapsed > 0 else "▶ Iniciar Tarefa"
             )
-            time_label.pack(side="left")
+            btn_bg = "#065f46" if is_running else "#232733"
+            btn_fg = "#34d399" if is_running else "#a5b4fc"
+            btn_border = "#10b981" if is_running else "#373e51"
+
+            self.timer_btn = ctk.CTkButton(
+                meta_frame,
+                text=btn_text,
+                font=("Segoe UI", meta_font_size, "bold"),
+                height=22,
+                corner_radius=6,
+                fg_color=btn_bg,
+                hover_color="#047857" if is_running else "#2d3345",
+                text_color=btn_fg,
+                border_width=1,
+                border_color=btn_border,
+                command=self._handle_timer_toggle
+            )
+            self.timer_btn.pack(side="left")
+        else:
+            # Se concluída: Exibe o tempo total gasto na tarefa
+            duration = task.get("completed_duration")
+            if duration:
+                dur_badge = ctk.CTkFrame(
+                    meta_frame,
+                    corner_radius=6,
+                    fg_color="#132e22",
+                    border_color="#059669",
+                    border_width=1
+                )
+                dur_badge.pack(side="left")
+                dur_label = ctk.CTkLabel(
+                    dur_badge,
+                    text=f"⏱️ Feito em {duration}",
+                    font=("Segoe UI", meta_font_size, "bold"),
+                    text_color="#34d399",
+                    padx=6,
+                    pady=1
+                )
+                dur_label.pack()
 
         # 4. Botão Excluir (Discreto)
         self.del_btn = ctk.CTkButton(
@@ -125,9 +178,20 @@ class TaskItemCard(ctk.CTkFrame):
         )
         self.del_btn.grid(row=0, column=2, rowspan=2, padx=(2, 8), pady=8, sticky="e")
 
+    def update_timer_display(self, elapsed: int):
+        """Atualiza o mostrador do cronômetro ao vivo."""
+        if hasattr(self, "timer_btn") and self.task.get("timer_running"):
+            from storage import format_stopwatch
+            self.current_elapsed = elapsed
+            self.timer_btn.configure(text=f"⏸ {format_stopwatch(elapsed)}")
+
     def _handle_toggle(self):
         if self.on_toggle:
             self.on_toggle(self.task_id)
+
+    def _handle_timer_toggle(self):
+        if self.on_timer_toggle:
+            self.on_timer_toggle(self.task_id)
 
     def _handle_delete(self):
         if self.on_delete:

@@ -43,6 +43,8 @@ class AppWindow(ctk.CTk):
         self.current_status = "ready"
         self._feedback_timer = None
         self._rms_timer = None
+        self._stopwatch_timer = None
+        self._card_widgets = []
 
         # Tamanho de Fonte Configurável & Persistente
         self.font_size = self._load_font_setting()
@@ -56,6 +58,9 @@ class AppWindow(ctk.CTk):
         self._build_ui()
         self._refresh_tasks_view()
         self._update_status_ui("ready")
+
+        # Inicia loop do cronômetro em tempo real
+        self._start_stopwatch_loop()
 
     def _build_ui(self):
         # 1. Header Superior (Barra Minimalista)
@@ -352,6 +357,8 @@ class AppWindow(ctk.CTk):
         )
         btn_font_inc.pack(side="left", padx=(2, 0))
 
+        self._card_widgets.clear()
+
         if not pending_tasks:
             empty_lbl = ctk.CTkLabel(
                 self.scroll_container,
@@ -363,14 +370,18 @@ class AppWindow(ctk.CTk):
             empty_lbl.pack(fill="x")
         else:
             for task in pending_tasks:
+                elapsed = self.storage.get_task_current_elapsed(task)
                 card = TaskItemCard(
                     self.scroll_container,
                     task=task,
                     on_toggle=self._handle_toggle_task,
                     on_delete=self._handle_delete_task,
-                    font_size=self.font_size
+                    on_timer_toggle=self._handle_timer_toggle,
+                    font_size=self.font_size,
+                    current_elapsed=elapsed
                 )
                 card.pack(fill="x", pady=3)
+                self._card_widgets.append(card)
 
         # Seção "Concluídas"
         if completed_tasks:
@@ -408,6 +419,17 @@ class AppWindow(ctk.CTk):
                 )
                 card.pack(fill="x", pady=2)
 
+    def _start_stopwatch_loop(self):
+        """Atualiza a contagem dos segundos ao vivo a cada 1 segundo para tarefas em foco."""
+        try:
+            for card in list(self._card_widgets):
+                if card.winfo_exists() and card.task.get("timer_running"):
+                    elapsed = self.storage.get_task_current_elapsed(card.task)
+                    card.update_timer_display(elapsed)
+        except Exception:
+            pass
+        self._stopwatch_timer = self.after(1000, self._start_stopwatch_loop)
+
     def _manual_add_task(self):
         title = self.input_entry.get().strip()
         if not title:
@@ -421,11 +443,24 @@ class AppWindow(ctk.CTk):
         self._refresh_tasks_view()
         self.show_feedback("Tarefa adicionada!")
 
+    def _handle_timer_toggle(self, task_id: str):
+        updated = self.storage.toggle_timer(task_id)
+        self._refresh_tasks_view()
+        if updated:
+            if updated.get("timer_running"):
+                self.show_feedback("⏱️ Foco iniciado! Contando tempo...")
+            else:
+                self.show_feedback("⏸️ Tarefa pausada.")
+
     def _handle_toggle_task(self, task_id: str):
         updated = self.storage.toggle_task(task_id)
         self._refresh_tasks_view()
         if updated:
-            msg = "Tarefa concluída!" if updated.get("completed") else "Tarefa reaberta!"
+            if updated.get("completed"):
+                dur = updated.get("completed_duration")
+                msg = f"🎉 Feito em {dur}! Parabéns!" if dur else "Tarefa concluída!"
+            else:
+                msg = "Tarefa reaberta!"
             self.show_feedback(msg)
 
     def _handle_delete_task(self, task_id: str):

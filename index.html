@@ -300,6 +300,32 @@
       color: var(--text-muted);
     }
 
+    .timer-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      text-decoration: none;
+    }
+    .timer-pill.running {
+      background: #065f46;
+      color: #34d399;
+      border: 1px solid #10b981;
+    }
+    .timer-pill.idle {
+      background: #232733;
+      color: #a5b4fc;
+      border: 1px solid #373e51;
+    }
+    .timer-pill.done {
+      background: #132e22;
+      color: #34d399;
+      border: 1px solid #059669;
+    }
+
     /* Grid de Features */
     .features-grid {
       display: grid;
@@ -388,6 +414,7 @@
           <div class="task-meta">
             <span class="prio-pill prio-alta">Alta</span>
             <span class="task-time">🕒 15:00</span>
+            <span class="timer-pill running">⏸ 03:42</span>
           </div>
         </div>
       </div>
@@ -399,16 +426,17 @@
           <div class="task-meta">
             <span class="prio-pill prio-media">Média</span>
             <span class="task-time">🕒 Hoje</span>
+            <span class="timer-pill idle">▶ Iniciar</span>
           </div>
         </div>
       </div>
 
       <div class="task-card">
-        <input type="checkbox" class="task-check">
+        <input type="checkbox" class="task-check" checked>
         <div class="task-content">
-          <div class="task-name">Comprar café</div>
+          <div class="task-name" style="text-decoration: line-through; color: var(--text-muted);">Comprar café</div>
           <div class="task-meta">
-            <span class="prio-pill prio-baixa">Baixa</span>
+            <span class="timer-pill done">⏱️ Feito em 12m 30s</span>
           </div>
         </div>
       </div>
@@ -424,15 +452,21 @@
     </div>
 
     <div class="feature-item">
+      <div class="feature-icon">⏱️</div>
+      <h3>Cronômetro de Foco & Produtividade</h3>
+      <p>Clique em "Iniciar Tarefa" para focar! O app conta o tempo ao vivo e salva exatamente quanto tempo você levou para concluir.</p>
+    </div>
+
+    <div class="feature-item">
       <div class="feature-icon">🔥</div>
       <h3>Firebase Firestore Híbrido</h3>
       <p>Sincronização em tempo real na nuvem aliada a um cache local atômico para funcionamento mesmo sem internet.</p>
     </div>
 
     <div class="feature-item">
-      <div class="feature-icon">⚡</div>
-      <h3>Ultraleve (~40MB RAM)</h3>
-      <p>Desenvolvido em CustomTkinter com janela flutuante Always-on-Top e atalho global do Windows.</p>
+      <div class="feature-icon">🔍</div>
+      <h3>Zoom de Letras (A+ / A-)</h3>
+      <p>Aumente ou diminua o tamanho das letras com um clique ou atalhos de teclado (Ctrl + e Ctrl -) para máximo conforto visual.</p>
     </div>
   </div>
 

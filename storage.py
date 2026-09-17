@@ -14,6 +14,26 @@ from config import (
 
 logger = logging.getLogger("TaskStorage")
 
+def format_duration(seconds: int) -> str:
+    """Formata segundos em texto legível como '45s', '14m 20s' ou '1h 30m'."""
+    if seconds < 60:
+        return f"{seconds}s"
+    minutes = seconds // 60
+    rem_seconds = seconds % 60
+    if minutes < 60:
+        return f"{minutes}m {rem_seconds:02d}s"
+    hours = minutes // 60
+    rem_minutes = minutes % 60
+    return f"{hours}h {rem_minutes:02d}m"
+
+def format_stopwatch(seconds: int) -> str:
+    """Formata segundos no formato MM:SS ou HH:MM:SS para o cronômetro."""
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    if h > 0:
+        return f"{h:02d}:{m:02d}:{s:02d}"
+    return f"{m:02d}:{s:02d}"
+
 class TaskStorage:
     def __init__(self, filepath=DATA_FILE):
         self.filepath = filepath
@@ -256,7 +276,11 @@ class TaskStorage:
             "completed": False,
             "priority": norm_priority,
             "due_time": due_time.strip() if due_time else None,
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.now().isoformat(),
+            "timer_running": False,
+            "timer_started_at": None,
+            "elapsed_seconds": 0,
+            "completed_duration": None
         }
 
         with self._lock:
@@ -266,19 +290,95 @@ class TaskStorage:
         self._async_cloud_op(self._cloud_set_task, new_task)
         return new_task
 
-    def toggle_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+    def toggle_timer(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """Inicia ou pausa o cronômetro de foco de uma tarefa."""
         updated_task = None
         with self._lock:
             for t in self.tasks:
                 if t.get("id") == task_id:
-                    t["completed"] = not t.get("completed", False)
+                    # Se estiver rodando, pausa e acumula o tempo
+                    if t.get("timer_running"):
+                        if t.get("timer_started_at"):
+                            try:
+                                started = datetime.fromisoformat(t["timer_started_at"])
+                                delta = int((datetime.now() - started).total_seconds())
+                                t["elapsed_seconds"] = t.get("elapsed_seconds", 0) + max(0, delta)
+                            except Exception:
+                                pass
+                        t["timer_running"] = False
+                        t["timer_started_at"] = None
+                    else:
+                        # Se não estiver rodando, pausa outras e inicia esta
+                        for other in self.tasks:
+                            if other.get("timer_running") and other.get("id") != task_id:
+                                if other.get("timer_started_at"):
+                                    try:
+                                        s = datetime.fromisoformat(other["timer_started_at"])
+                                        d = int((datetime.now() - s).total_seconds())
+                                        other["elapsed_seconds"] = other.get("elapsed_seconds", 0) + max(0, d)
+                                    except Exception:
+                                        pass
+                                other["timer_running"] = False
+                                other["timer_started_at"] = None
+
+                        t["timer_running"] = True
+                        t["timer_started_at"] = datetime.now().isoformat()
+
                     updated_task = dict(t)
                     break
             if updated_task:
                 self._save_local()
 
         if updated_task:
-            self._async_cloud_op(self._cloud_update_task, task_id, {"completed": updated_task["completed"]})
+            self._async_cloud_op(self._cloud_set_task, updated_task)
+        return updated_task
+
+    def get_task_current_elapsed(self, task: Dict[str, Any]) -> int:
+        """Calcula os segundos totais decorridos considerando tempo acumulado + tempo atual se rodando."""
+        total = task.get("elapsed_seconds", 0)
+        if task.get("timer_running") and task.get("timer_started_at"):
+            try:
+                started = datetime.fromisoformat(task["timer_started_at"])
+                total += int((datetime.now() - started).total_seconds())
+            except Exception:
+                pass
+        return max(0, total)
+
+    def toggle_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+        updated_task = None
+        with self._lock:
+            for t in self.tasks:
+                if t.get("id") == task_id:
+                    new_state = not t.get("completed", False)
+                    t["completed"] = new_state
+                    
+                    if new_state:
+                        # Tarefa concluída: para o cronômetro se estiver rodando e grava a duração
+                        if t.get("timer_running") and t.get("timer_started_at"):
+                            try:
+                                started = datetime.fromisoformat(t["timer_started_at"])
+                                delta = int((datetime.now() - started).total_seconds())
+                                t["elapsed_seconds"] = t.get("elapsed_seconds", 0) + max(0, delta)
+                            except Exception:
+                                pass
+                        t["timer_running"] = False
+                        t["timer_started_at"] = None
+
+                        total_sec = t.get("elapsed_seconds", 0)
+                        if total_sec > 0:
+                            t["completed_duration"] = format_duration(total_sec)
+                    else:
+                        # Tarefa reaberta
+                        t["timer_running"] = False
+                        t["timer_started_at"] = None
+
+                    updated_task = dict(t)
+                    break
+            if updated_task:
+                self._save_local()
+
+        if updated_task:
+            self._async_cloud_op(self._cloud_set_task, updated_task)
         return updated_task
 
     def delete_task(self, task_id: str) -> bool:
