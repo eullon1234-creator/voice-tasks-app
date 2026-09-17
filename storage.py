@@ -418,3 +418,70 @@ class TaskStorage:
                 if search_norm in title_norm or title_norm in search_norm:
                     return t
         return None
+
+    def get_productivity_stats(self) -> Dict[str, Any]:
+        """Calcula métricas de produtividade, KPIs e dados para os gráficos."""
+        with self._lock:
+            all_tasks = list(self.tasks)
+
+        total = len(all_tasks)
+        completed = [t for t in all_tasks if t.get("completed", False)]
+        pending = [t for t in all_tasks if not t.get("completed", False)]
+        
+        # Tempo total focado em segundos
+        total_seconds = 0
+        timed_tasks_count = 0
+        for t in all_tasks:
+            sec = self.get_task_current_elapsed(t)
+            total_seconds += sec
+            if sec > 0:
+                timed_tasks_count += 1
+
+        avg_seconds = int(total_seconds / timed_tasks_count) if timed_tasks_count > 0 else 0
+        completion_rate = int((len(completed) / total) * 100) if total > 0 else 0
+
+        # Estatísticas por Prioridade
+        prio_counts = {"alta": 0, "media": 0, "baixa": 0}
+        prio_completed = {"alta": 0, "media": 0, "baixa": 0}
+        for t in all_tasks:
+            p = t.get("priority", "media")
+            if p in prio_counts:
+                prio_counts[p] += 1
+                if t.get("completed"):
+                    prio_completed[p] += 1
+
+        # Estatísticas por dia da semana (Seg, Ter, Qua, Qui, Sex, Sab, Dom)
+        weekday_names = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+        weekday_time = {day: 0 for day in weekday_names}
+        weekday_tasks = {day: 0 for day in weekday_names}
+
+        for t in all_tasks:
+            created_str = t.get("created_at")
+            if created_str:
+                try:
+                    dt = datetime.fromisoformat(created_str)
+                    w_name = weekday_names[dt.weekday()]
+                    weekday_tasks[w_name] += 1
+                    weekday_time[w_name] += self.get_task_current_elapsed(t)
+                except Exception:
+                    pass
+
+        return {
+            "total_tasks": total,
+            "completed_count": len(completed),
+            "pending_count": len(pending),
+            "total_focus_seconds": total_seconds,
+            "total_focus_formatted": format_duration(total_seconds),
+            "avg_seconds": avg_seconds,
+            "avg_formatted": format_duration(avg_seconds),
+            "completion_rate": completion_rate,
+            "prio_counts": prio_counts,
+            "prio_completed": prio_completed,
+            "weekday_time": weekday_time,
+            "weekday_tasks": weekday_tasks,
+            "recent_completed": sorted(
+                completed,
+                key=lambda x: x.get("created_at", ""),
+                reverse=True
+            )[:6]
+        }

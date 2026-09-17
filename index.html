@@ -449,14 +449,129 @@
       z-index: 100;
       padding: 20px;
     }
-    .modal-card {
+    /* Abas de Navegação */
+    .tabs-bar {
+      display: flex;
       background: #181a24;
+      margin: 8px 12px;
+      padding: 4px;
+      border-radius: 10px;
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-      width: 100%;
-      max-width: 360px;
     }
+    .tab-btn {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+
+    /* Dashboard de Relatórios */
+    .reports-view {
+      padding: 8px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .kpi-icon { font-size: 18px; margin-bottom: 2px; }
+    .kpi-val { font-size: 18px; font-weight: 800; color: var(--text); }
+    .kpi-val.green { color: #34d399; }
+    .kpi-val.indigo { color: #818cf8; }
+    .kpi-val.amber { color: #fbbf24; }
+    .kpi-val.red { color: #f87171; }
+    .kpi-label { font-size: 11px; color: var(--text-muted); }
+
+    /* Gráfico de Barras Semanal */
+    .chart-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .chart-box-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      letter-spacing: 0.04em;
+    }
+    .chart-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .chart-day-label {
+      width: 32px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .chart-bar-track {
+      flex: 1;
+      height: 8px;
+      background: #0f1016;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .chart-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #818cf8);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+    .chart-bar-val {
+      width: 55px;
+      text-align: right;
+      font-size: 10px;
+      color: #34d399;
+      font-weight: 600;
+    }
+
+    /* Botão Copiar Relatório */
+    .copy-report-btn {
+      width: 100%;
+      height: 42px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 4px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+    .copy-report-btn:hover { background: var(--accent-hover); }
   </style>
 </head>
 <body>
@@ -480,51 +595,104 @@
       </div>
     </header>
 
-    <!-- Voice Recording Card -->
-    <div class="voice-card">
-      <button class="mic-btn" id="micBtn" onclick="toggleVoiceRecording()">🎙</button>
-      <div class="voice-details">
-        <div class="voice-status-title" id="voiceStatusTitle">● Pronto</div>
-        <div class="voice-status-sub" id="voiceStatusSub">Toque no mic para falar um comando</div>
+    <!-- Abas de Navegação -->
+    <div class="tabs-bar">
+      <button class="tab-btn active" id="tabTasksBtn" onclick="switchTab('tasks')">📋 Minhas Tarefas</button>
+      <button class="tab-btn" id="tabReportsBtn" onclick="switchTab('reports')">📊 Relatórios & Gráficos</button>
+    </div>
+
+    <!-- ABA 1: TAREFAS -->
+    <div id="tabTasksView">
+      <!-- Voice Recording Card -->
+      <div class="voice-card">
+        <button class="mic-btn" id="micBtn" onclick="toggleVoiceRecording()">🎙</button>
+        <div class="voice-details">
+          <div class="voice-status-title" id="voiceStatusTitle">● Pronto</div>
+          <div class="voice-status-sub" id="voiceStatusSub">Toque no mic para falar um comando</div>
+        </div>
+      </div>
+
+      <!-- Toast de Feedback -->
+      <div class="toast-feedback" id="toastFeedback"></div>
+
+      <!-- Barra de Seção e Zoom de Letra -->
+      <div class="section-bar">
+        <div class="section-title" id="pendingHeader">A FAZER</div>
+        <div class="font-zoom-ctrl">
+          <button class="font-zoom-btn" onclick="adjustFontSize(-2)">A-</button>
+          <span class="font-zoom-val" id="fontSizeDisplay">15px</span>
+          <button class="font-zoom-btn" onclick="adjustFontSize(2)">A+</button>
+        </div>
+      </div>
+
+      <!-- Lista de Tarefas -->
+      <div class="tasks-container" id="tasksList">
+        <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
+          Carregando tarefas do Firebase...
+        </div>
+      </div>
+
+      <!-- Seção Concluídas -->
+      <div class="section-bar" id="compSectionBar" style="display: none; margin-top: 16px;">
+        <div class="section-title" id="completedHeader">CONCLUÍDAS</div>
+        <button class="pill-btn" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);" onclick="clearCompletedTasks()">Limpar todas</button>
+      </div>
+      <div class="tasks-container" id="completedList"></div>
+
+      <!-- Barra Inferior de Entrada Manual -->
+      <div class="bottom-bar">
+        <input type="text" class="task-input" id="manualInput" placeholder="Nova tarefa manual..." onkeypress="if(event.key==='Enter') addManualTask()">
+        <select class="prio-select" id="prioSelect">
+          <option value="media">Média</option>
+          <option value="alta">Alta</option>
+          <option value="baixa">Baixa</option>
+        </select>
+        <button class="add-btn" onclick="addManualTask()">＋</button>
       </div>
     </div>
 
-    <!-- Toast de Feedback -->
-    <div class="toast-feedback" id="toastFeedback"></div>
-
-    <!-- Barra de Seção e Zoom de Letra -->
-    <div class="section-bar">
-      <div class="section-title" id="pendingHeader">A FAZER</div>
-      <div class="font-zoom-ctrl">
-        <button class="font-zoom-btn" onclick="adjustFontSize(-2)">A-</button>
-        <span class="font-zoom-val" id="fontSizeDisplay">15px</span>
-        <button class="font-zoom-btn" onclick="adjustFontSize(2)">A+</button>
+    <!-- ABA 2: RELATÓRIOS & GRÁFICOS -->
+    <div id="tabReportsView" class="reports-view" style="display: none;">
+      <!-- Grade 2x2 de KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon">⏱️</div>
+          <div class="kpi-val green" id="kpiFocus">0s</div>
+          <div class="kpi-label">Tempo Total Focado</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">✅</div>
+          <div class="kpi-val indigo" id="kpiCompleted">0 / 0</div>
+          <div class="kpi-label" id="kpiCompletedPct">0% Concluídas</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">⚡</div>
+          <div class="kpi-val amber" id="kpiAvg">0s</div>
+          <div class="kpi-label">Média p/ Tarefa</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">📌</div>
+          <div class="kpi-val red" id="kpiPending">0</div>
+          <div class="kpi-label">Pendentes</div>
+        </div>
       </div>
-    </div>
 
-    <!-- Lista de Tarefas -->
-    <div class="tasks-container" id="tasksList">
-      <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
-        Carregando tarefas do Firebase...
+      <!-- Gráfico Semanal de Produtividade -->
+      <div class="chart-box">
+        <div class="chart-box-title">📈 PRODUTIVIDADE NA SEMANA</div>
+        <div id="weeklyBarsContainer"></div>
       </div>
-    </div>
 
-    <!-- Seção Concluídas -->
-    <div class="section-bar" id="compSectionBar" style="display: none; margin-top: 16px;">
-      <div class="section-title" id="completedHeader">CONCLUÍDAS</div>
-      <button class="pill-btn" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);" onclick="clearCompletedTasks()">Limpar todas</button>
-    </div>
-    <div class="tasks-container" id="completedList"></div>
+      <!-- Distribuição por Prioridade -->
+      <div class="chart-box">
+        <div class="chart-box-title">🎯 TAREFAS POR PRIORIDADE</div>
+        <div id="priorityBarsContainer"></div>
+      </div>
 
-    <!-- Barra Inferior de Entrada Manual -->
-    <div class="bottom-bar">
-      <input type="text" class="task-input" id="manualInput" placeholder="Nova tarefa manual..." onkeypress="if(event.key==='Enter') addManualTask()">
-      <select class="prio-select" id="prioSelect">
-        <option value="media">Média</option>
-        <option value="alta">Alta</option>
-        <option value="baixa">Baixa</option>
-      </select>
-      <button class="add-btn" onclick="addManualTask()">＋</button>
+      <!-- Botão Copiar Relatório -->
+      <button class="copy-report-btn" onclick="copyProductivitySummary()">
+        📋 Copiar Resumo de Produtividade
+      </button>
     </div>
 
   </div>
@@ -571,6 +739,9 @@
         currentTasks.push(data);
       });
       renderTasks();
+      if (typeof currentTab !== 'undefined' && currentTab === 'reports') {
+        renderReports();
+      }
     }, (error) => {
       console.warn("Firestore onSnapshot error:", error);
       showFeedback("Aguardando liberação de regras do Firestore", true);
@@ -1026,6 +1197,148 @@ Analise a transcrição de voz do usuário e o estado atual das tarefas. Retorne
     function escapeHtml(str) {
       if (!str) return '';
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ==================== 7. Controle de Abas & Relatórios ====================
+    let currentTab = 'tasks';
+
+    function switchTab(tab) {
+      currentTab = tab;
+      const tabTasksView = document.getElementById('tabTasksView');
+      const tabReportsView = document.getElementById('tabReportsView');
+      const btnTasks = document.getElementById('tabTasksBtn');
+      const btnReports = document.getElementById('tabReportsBtn');
+
+      if (tab === 'tasks') {
+        tabTasksView.style.display = 'block';
+        tabReportsView.style.display = 'none';
+        btnTasks.classList.add('active');
+        btnReports.classList.remove('active');
+        renderTasks();
+      } else {
+        tabTasksView.style.display = 'none';
+        tabReportsView.style.display = 'flex';
+        btnTasks.classList.remove('active');
+        btnReports.classList.add('active');
+        renderReports();
+      }
+    }
+
+    function renderReports() {
+      const total = currentTasks.length;
+      const completed = currentTasks.filter(t => t.completed);
+      const pending = currentTasks.filter(t => !t.completed);
+
+      let totalSeconds = 0;
+      let timedCount = 0;
+      currentTasks.forEach(t => {
+        const sec = getElapsedSeconds(t);
+        totalSeconds += sec;
+        if (sec > 0) timedCount++;
+      });
+
+      const avgSec = timedCount > 0 ? Math.floor(totalSeconds / timedCount) : 0;
+      const completionRate = total > 0 ? Math.round((completed.length / total) * 100) : 0;
+
+      // Atualiza KPIs
+      document.getElementById('kpiFocus').textContent = formatDuration(totalSeconds);
+      document.getElementById('kpiCompleted').textContent = `${completed.length} / ${total}`;
+      document.getElementById('kpiCompletedPct').textContent = `${completionRate}% Concluídas`;
+      document.getElementById('kpiAvg').textContent = formatDuration(avgSec);
+      document.getElementById('kpiPending').textContent = `${pending.length}`;
+
+      // Gráfico Semanal
+      const days = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+      const dayTimes = { "Seg": 0, "Ter": 0, "Qua": 0, "Qui": 0, "Sex": 0, "Sáb": 0, "Dom": 0 };
+
+      currentTasks.forEach(t => {
+        if (t.created_at) {
+          try {
+            const dt = new Date(t.created_at);
+            const dIdx = (dt.getDay() + 6) % 7;
+            const dName = days[dIdx];
+            dayTimes[dName] += getElapsedSeconds(t);
+          } catch(e){}
+        }
+      });
+
+      const maxTime = Math.max(...Object.values(dayTimes), 1);
+      const weeklyContainer = document.getElementById('weeklyBarsContainer');
+      weeklyContainer.innerHTML = days.map(d => {
+        const sec = dayTimes[d] || 0;
+        const pct = sec > 0 ? Math.min(100, Math.max(4, Math.round((sec / maxTime) * 100))) : 4;
+        const timeStr = sec > 0 ? formatDuration(sec) : '-';
+        return `
+          <div class="chart-bar-row">
+            <span class="chart-day-label">${d}</span>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill" style="width: ${pct}%; ${sec === 0 ? 'background: #262938;' : ''}"></div>
+            </div>
+            <span class="chart-bar-val" style="${sec === 0 ? 'color: var(--text-muted);' : ''}">${timeStr}</span>
+          </div>
+        `;
+      }).join('');
+
+      // Distribuição de Prioridades
+      const prioCounts = { alta: 0, media: 0, baixa: 0 };
+      const prioCompleted = { alta: 0, media: 0, baixa: 0 };
+      currentTasks.forEach(t => {
+        const p = (t.priority || 'media').toLowerCase();
+        if (prioCounts[p] !== undefined) {
+          prioCounts[p]++;
+          if (t.completed) prioCompleted[p]++;
+        }
+      });
+
+      const prioContainer = document.getElementById('priorityBarsContainer');
+      const prioConfig = [
+        { label: 'Alta', key: 'alta', color: '#ef4444' },
+        { label: 'Média', key: 'media', color: '#f59e0b' },
+        { label: 'Baixa', key: 'baixa', color: '#10b981' }
+      ];
+
+      const totAll = Math.max(total, 1);
+      prioContainer.innerHTML = prioConfig.map(p => {
+        const cnt = prioCounts[p.key] || 0;
+        const comp = prioCompleted[p.key] || 0;
+        const pct = cnt > 0 ? Math.min(100, Math.max(4, Math.round((cnt / totAll) * 100))) : 4;
+        return `
+          <div class="chart-bar-row">
+            <span class="chart-day-label" style="color: ${p.color}; width: 44px;">${p.label}</span>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill" style="width: ${pct}%; background: ${p.color};"></div>
+            </div>
+            <span class="chart-bar-val" style="color: var(--text-muted); width: 68px;">${comp}/${cnt} feitas</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function copyProductivitySummary() {
+      const total = currentTasks.length;
+      const completed = currentTasks.filter(t => t.completed);
+      const pending = currentTasks.filter(t => !t.completed);
+      let totalSeconds = 0;
+      let timedCount = 0;
+      currentTasks.forEach(t => {
+        const sec = getElapsedSeconds(t);
+        totalSeconds += sec;
+        if (sec > 0) timedCount++;
+      });
+      const avgSec = timedCount > 0 ? Math.floor(totalSeconds / timedCount) : 0;
+      const completionRate = total > 0 ? Math.round((completed.length / total) * 100) : 0;
+
+      const summary = `📊 Relatório de Produtividade • Voice Tasks\n` +
+        `⏱️ Tempo Focado: ${formatDuration(totalSeconds)}\n` +
+        `✅ Concluídas: ${completed.length} de ${total} (${completionRate}%)\n` +
+        `⚡ Tempo Médio: ${formatDuration(avgSec)}\n` +
+        `📌 Pendentes: ${pending.length}`;
+
+      navigator.clipboard.writeText(summary).then(() => {
+        showFeedback("Relatório copiado para a área de transferência!");
+      }).catch(() => {
+        showFeedback("Relatório gerado!");
+      });
     }
   </script>
 

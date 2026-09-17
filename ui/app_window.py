@@ -122,21 +122,21 @@ class AppWindow(ctk.CTk):
         )
         self.mobile_btn.pack(side="right", padx=(6, 0))
 
-        # Botão Configurar API Key
-        self.key_btn = ctk.CTkButton(
-            self.header_frame,
-            text="🔑 API",
-            width=46,
-            height=26,
-            font=("Segoe UI", 10, "bold"),
-            fg_color=THEME["card_bg"],
-            hover_color=THEME["card_hover"],
-            text_color=THEME["text_secondary"],
-            command=self._prompt_api_key_dialog
+        # 2. Barra de Navegação entre Abas (Tarefas / Relatórios)
+        self.tab_nav = ctk.CTkSegmentedButton(
+            self,
+            values=["📋 Minhas Tarefas", "📊 Relatórios & Gráficos"],
+            font=("Segoe UI", 11, "bold"),
+            selected_color=THEME["accent"],
+            selected_hover_color=THEME["accent_hover"],
+            unselected_color=THEME["card_bg"],
+            unselected_hover_color=THEME["card_hover"],
+            command=self._on_tab_change
         )
-        self.key_btn.pack(side="right")
+        self.tab_nav.set("📋 Minhas Tarefas")
+        self.tab_nav.pack(fill="x", padx=14, pady=(2, 4))
 
-        # 2. Painel de Gravação de Voz (Voice Bar)
+        # 3. Painel de Gravação de Voz (Voice Bar)
         self.voice_card = ctk.CTkFrame(
             self,
             fg_color=THEME["card_bg"],
@@ -206,6 +206,14 @@ class AppWindow(ctk.CTk):
         )
         self.scroll_container.pack(fill="both", expand=True, padx=10, pady=4)
 
+        # Container da Aba de Relatórios (inicia oculto)
+        self.reports_container = ctk.CTkScrollableFrame(
+            self,
+            fg_color="transparent",
+            scrollbar_button_color=THEME["border"],
+            scrollbar_button_hover_color=THEME["accent"]
+        )
+
         # 5. Barra Inferior de Entrada Manual Rápida
         self.bottom_bar = ctk.CTkFrame(self, fg_color=THEME["card_bg"], height=52, corner_radius=0)
         self.bottom_bar.pack(fill="x", side="bottom")
@@ -249,6 +257,140 @@ class AppWindow(ctk.CTk):
             command=self._manual_add_task
         )
         self.add_btn.pack(side="left")
+
+    def _on_tab_change(self, selected_tab: str):
+        """Alterna entre as abas de Tarefas e Relatórios."""
+        if "Tarefas" in selected_tab:
+            self.reports_container.pack_forget()
+            self.voice_card.pack(fill="x", padx=14, pady=8, after=self.tab_nav)
+            self.feedback_banner.pack(fill="x", padx=16, pady=0, after=self.voice_card)
+            self.bottom_bar.pack(fill="x", side="bottom")
+            self.scroll_container.pack(fill="both", expand=True, padx=10, pady=4, after=self.feedback_banner)
+            self._refresh_tasks_view()
+        else:
+            self.voice_card.pack_forget()
+            self.scroll_container.pack_forget()
+            self.bottom_bar.pack_forget()
+            self.reports_container.pack(fill="both", expand=True, padx=10, pady=4, after=self.tab_nav)
+            self._refresh_reports_view()
+
+    def _refresh_reports_view(self):
+        """Renderiza os KPIs, Gráficos de Barra e Histórico de Produtividade."""
+        for widget in self.reports_container.winfo_children():
+            widget.destroy()
+
+        stats = self.storage.get_productivity_stats()
+
+        # 1. Grade de KPIs (2x2)
+        kpi_grid = ctk.CTkFrame(self.reports_container, fg_color="transparent")
+        kpi_grid.pack(fill="x", pady=(2, 8))
+        kpi_grid.grid_columnconfigure((0, 1), weight=1)
+
+        def make_kpi_card(master, row, col, icon, value, label, color):
+            card = ctk.CTkFrame(master, fg_color=THEME["card_bg"], border_width=1, border_color=THEME["border"], corner_radius=10)
+            card.grid(row=row, column=col, padx=4, pady=4, sticky="nsew")
+            
+            top_f = ctk.CTkFrame(card, fg_color="transparent")
+            top_f.pack(fill="x", padx=10, pady=(8, 2))
+            
+            lbl_ic = ctk.CTkLabel(top_f, text=icon, font=("Segoe UI", 16))
+            lbl_ic.pack(side="left")
+            
+            lbl_val = ctk.CTkLabel(card, text=value, font=("Segoe UI", 16, "bold"), text_color=color)
+            lbl_val.pack(padx=10, anchor="w")
+            
+            lbl_desc = ctk.CTkLabel(card, text=label, font=("Segoe UI", 10), text_color=THEME["text_muted"])
+            lbl_desc.pack(padx=10, pady=(0, 8), anchor="w")
+
+        make_kpi_card(kpi_grid, 0, 0, "⏱️", stats["total_focus_formatted"], "Tempo de Foco", "#34d399")
+        make_kpi_card(kpi_grid, 0, 1, "✅", f"{stats['completed_count']} / {stats['total_tasks']}", f"{stats['completion_rate']}% Concluídas", "#818cf8")
+        make_kpi_card(kpi_grid, 1, 0, "⚡", stats["avg_formatted"], "Média p/ Tarefa", "#fbbf24")
+        make_kpi_card(kpi_grid, 1, 1, "📌", f"{stats['pending_count']} pendentes", "A Fazer", "#f87171")
+
+        # 2. Gráfico Semanal de Produtividade (Barras)
+        chart_card = ctk.CTkFrame(self.reports_container, fg_color=THEME["card_bg"], border_width=1, border_color=THEME["border"], corner_radius=10)
+        chart_card.pack(fill="x", pady=6)
+
+        ch_header = ctk.CTkFrame(chart_card, fg_color="transparent")
+        ch_header.pack(fill="x", padx=12, pady=(10, 6))
+
+        ch_title = ctk.CTkLabel(ch_header, text="📈 PRODUTIVIDADE NA SEMANA", font=("Segoe UI", 11, "bold"), text_color=THEME["text_secondary"])
+        ch_title.pack(side="left")
+
+        weekday_time = stats["weekday_time"]
+        max_time = max(weekday_time.values()) if any(weekday_time.values()) else 1
+
+        for day, sec in weekday_time.items():
+            row_f = ctk.CTkFrame(chart_card, fg_color="transparent")
+            row_f.pack(fill="x", padx=12, pady=2)
+
+            day_lbl = ctk.CTkLabel(row_f, text=day, font=("Segoe UI", 11, "bold"), width=36, anchor="w", text_color=THEME["text_primary"])
+            day_lbl.pack(side="left")
+
+            ratio = min(1.0, max(0.02, sec / max_time)) if sec > 0 else 0.02
+            bar = ctk.CTkProgressBar(row_f, height=8, corner_radius=4, fg_color="#101116", progress_color=THEME["accent"] if sec > 0 else "#262938")
+            bar.set(ratio)
+            bar.pack(side="left", fill="x", expand=True, padx=8)
+
+            from storage import format_duration
+            time_text = format_duration(sec) if sec > 0 else "-"
+            val_lbl = ctk.CTkLabel(row_f, text=time_text, font=("Segoe UI", 10), width=54, anchor="e", text_color=THEME["text_muted"] if sec == 0 else "#34d399")
+            val_lbl.pack(side="right")
+
+        ctk.CTkFrame(chart_card, height=6, fg_color="transparent").pack()
+
+        # 3. Distribuição por Prioridade
+        prio_card = ctk.CTkFrame(self.reports_container, fg_color=THEME["card_bg"], border_width=1, border_color=THEME["border"], corner_radius=10)
+        prio_card.pack(fill="x", pady=6)
+
+        p_header = ctk.CTkFrame(prio_card, fg_color="transparent")
+        p_header.pack(fill="x", padx=12, pady=(10, 6))
+        p_title = ctk.CTkLabel(p_header, text="🎯 TAREFAS POR PRIORIDADE", font=("Segoe UI", 11, "bold"), text_color=THEME["text_secondary"])
+        p_title.pack(side="left")
+
+        prio_names = [("Alta", "alta", "#ef4444"), ("Média", "media", "#f59e0b"), ("Baixa", "baixa", "#10b981")]
+        tot_all = max(1, stats["total_tasks"])
+        for p_label, p_key, p_col in prio_names:
+            cnt = stats["prio_counts"].get(p_key, 0)
+            comp = stats["prio_completed"].get(p_key, 0)
+            p_row = ctk.CTkFrame(prio_card, fg_color="transparent")
+            p_row.pack(fill="x", padx=12, pady=2)
+
+            pl_lbl = ctk.CTkLabel(p_row, text=p_label, font=("Segoe UI", 11), width=48, anchor="w", text_color=p_col)
+            pl_lbl.pack(side="left")
+
+            p_bar = ctk.CTkProgressBar(p_row, height=8, corner_radius=4, fg_color="#101116", progress_color=p_col)
+            p_bar.set(cnt / tot_all if cnt > 0 else 0.02)
+            p_bar.pack(side="left", fill="x", expand=True, padx=8)
+
+            pct_lbl = ctk.CTkLabel(p_row, text=f"{comp}/{cnt} feitas", font=("Segoe UI", 10), width=74, anchor="e", text_color=THEME["text_muted"])
+            pct_lbl.pack(side="right")
+
+        ctk.CTkFrame(prio_card, height=6, fg_color="transparent").pack()
+
+        # 4. Botão Copiar Relatório
+        def copy_summary():
+            summary_text = (
+                f"📊 Relatório de Produtividade • Voice Tasks\n"
+                f"⏱️ Tempo Focado: {stats['total_focus_formatted']}\n"
+                f"✅ Concluídas: {stats['completed_count']} de {stats['total_tasks']} ({stats['completion_rate']}%)\n"
+                f"⚡ Tempo Médio por Tarefa: {stats['avg_formatted']}\n"
+                f"📌 Pendentes: {stats['pending_count']}"
+            )
+            self.clipboard_clear()
+            self.clipboard_append(summary_text)
+            self.show_feedback("Relatório copiado para a área de transferência!")
+
+        copy_btn = ctk.CTkButton(
+            self.reports_container,
+            text="📋 Copiar Resumo de Produtividade",
+            font=("Segoe UI", 12, "bold"),
+            height=36,
+            fg_color=THEME["accent"],
+            hover_color=THEME["accent_hover"],
+            command=copy_summary
+        )
+        copy_btn.pack(fill="x", pady=(8, 16))
 
     def _toggle_always_on_top(self):
         self.always_on_top = not self.always_on_top
