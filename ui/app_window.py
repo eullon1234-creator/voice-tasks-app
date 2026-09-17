@@ -106,11 +106,27 @@ class AppWindow(ctk.CTk):
         )
         self.db_btn.pack(side="right", padx=(6, 0))
 
+        # Botão Celular (QR Code)
+        self.mobile_btn = ctk.CTkButton(
+            self.header_frame,
+            text="📱 App",
+            width=48,
+            height=26,
+            font=("Segoe UI", 10, "bold"),
+            fg_color="#1e1b4b",
+            hover_color="#312e81",
+            text_color="#a5b4fc",
+            border_width=1,
+            border_color="#4338ca",
+            command=self._show_mobile_qr_dialog
+        )
+        self.mobile_btn.pack(side="right", padx=(6, 0))
+
         # Botão Configurar API Key
         self.key_btn = ctk.CTkButton(
             self.header_frame,
             text="🔑 API",
-            width=50,
+            width=46,
             height=26,
             font=("Segoe UI", 10, "bold"),
             fg_color=THEME["card_bg"],
@@ -627,3 +643,68 @@ class AppWindow(ctk.CTk):
             self._save_font_setting()
             self._refresh_tasks_view()
             self.show_feedback(f"Fonte diminuída: {self.font_size}px")
+
+    def _show_mobile_qr_dialog(self):
+        """Abre janela com o QR Code para abrir o app no smartphone."""
+        top = ctk.CTkToplevel(self)
+        top.title("📱 Voice Tasks no Celular")
+        top.geometry("340x430")
+        top.resizable(False, False)
+        top.configure(fg_color=THEME["bg_dark"])
+        top.attributes("-topmost", True)
+
+        title = ctk.CTkLabel(
+            top,
+            text="📱 Voice Tasks no Celular",
+            font=("Segoe UI", 15, "bold"),
+            text_color=THEME["text_primary"]
+        )
+        title.pack(pady=(16, 4))
+
+        sub = ctk.CTkLabel(
+            top,
+            text="Aponte a câmera do seu celular para o QR Code abaixo:",
+            font=("Segoe UI", 11),
+            text_color=THEME["text_muted"],
+            wraplength=280
+        )
+        sub.pack(pady=(0, 10))
+
+        # Carrega imagem do QR Code
+        from config import BASE_DIR
+        from PIL import Image
+        qr_path = BASE_DIR / "mobile_qr.png"
+
+        if qr_path.is_file():
+            pil_img = Image.open(qr_path)
+            ctk_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(190, 190))
+            qr_label = ctk.CTkLabel(top, image=ctk_img, text="")
+            qr_label.pack(pady=6)
+
+        url_str = "https://eullon1234-creator.github.io/voice-tasks-app/"
+
+        def copy_url():
+            top.clipboard_clear()
+            top.clipboard_append(url_str)
+            btn_copy.configure(text="✅ Link Copiado!")
+            top.after(2000, lambda: btn_copy.configure(text="📋 Copiar Link"))
+
+        btn_copy = ctk.CTkButton(
+            top,
+            text="📋 Copiar Link",
+            font=("Segoe UI", 11, "bold"),
+            height=30,
+            fg_color=THEME["accent"],
+            hover_color=THEME["accent_hover"],
+            command=copy_url
+        )
+        btn_copy.pack(pady=(8, 4))
+
+        hint = ctk.CTkLabel(
+            top,
+            text="💡 Dica: No celular, toque nos 3 pontinhos e escolha 'Adicionar à tela inicial' para instalar como app!",
+            font=("Segoe UI", 9, "italic"),
+            text_color="#818cf8",
+            wraplength=280
+        )
+        hint.pack(pady=(4, 12))

@@ -2,477 +2,1032 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚡ Voice Tasks • Groq AI & Firebase</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>⚡ Voice Tasks • Mobile & Web</title>
+  
+  <!-- PWA & Mobile Meta Tags -->
+  <meta name="theme-color" content="#121214">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Voice Tasks">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/png" href="icon-192.png">
+
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Firebase JS SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+
   <style>
     :root {
       --bg: #0c0d10;
-      --card-bg: #14161d;
-      --card-border: #232733;
+      --card-bg: #15161e;
+      --card-hover: #1e202b;
+      --border: #262938;
+      --text: #f4f4f5;
+      --text-muted: #9ca3af;
       --accent: #6366f1;
       --accent-hover: #4f46e5;
       --accent-glow: rgba(99, 102, 241, 0.35);
-      --text: #f3f4f6;
-      --text-muted: #9ca3af;
       --danger: #ef4444;
-      --success: #10b981;
       --warning: #f59e0b;
+      --success: #10b981;
+      --font-size: 15px;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: radial-gradient(circle at 50% 0%, #1c1d2e 0%, var(--bg) 75%);
+      background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 40px 20px;
+      padding-bottom: 74px;
     }
 
-    .hero {
-      text-align: center;
-      max-width: 800px;
-      margin-bottom: 36px;
-    }
-
-    .badge-top {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(99, 102, 241, 0.12);
-      border: 1px solid rgba(99, 102, 241, 0.3);
-      color: #a5b4fc;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 9999px;
-      margin-bottom: 16px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    h1 {
-      font-size: clamp(2rem, 5vw, 3.2rem);
-      font-weight: 800;
-      line-height: 1.15;
-      background: linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 14px;
-    }
-
-    p.subtitle {
-      font-size: 1.1rem;
-      color: var(--text-muted);
-      line-height: 1.6;
-      max-width: 600px;
-      margin: 0 auto 24px;
-    }
-
-    .btn-group {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 11px 22px;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      text-decoration: none;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-      box-shadow: 0 4px 20px var(--accent-glow);
-    }
-    .btn-primary:hover {
-      background: var(--accent-hover);
-      transform: translateY(-1px);
-    }
-
-    .btn-secondary {
-      background: var(--card-bg);
-      color: var(--text);
-      border: 1px solid var(--card-border);
-    }
-    .btn-secondary:hover {
-      background: #1e2230;
-    }
-
-    /* Mockup do Aplicativo Desktop */
-    .app-preview-container {
+    /* Container Central Responsivo */
+    .app-shell {
       width: 100%;
-      max-width: 420px;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 35px rgba(99, 102, 241, 0.15);
-      overflow: hidden;
-      margin-bottom: 48px;
+      max-width: 480px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #111218;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
     }
 
-    .preview-header {
-      padding: 14px 18px;
+    /* Header Superior */
+    header {
+      padding: 14px 16px;
+      background: #15161e;
+      border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid var(--card-border);
-      background: rgba(255, 255, 255, 0.02);
+      position: sticky;
+      top: 0;
+      z-index: 50;
     }
 
-    .preview-title {
-      font-size: 14px;
-      font-weight: 700;
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo-text {
+      font-size: 16px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-actions {
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
-    .preview-badges {
-      display: flex;
-      gap: 6px;
-    }
-
-    .mini-badge {
-      font-size: 10px;
+    .pill-btn {
+      font-size: 11px;
       font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 6px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #1c1d27;
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
     }
-    .mini-badge.cloud {
+    .pill-btn.cloud {
       background: #132e22;
+      border-color: #059669;
       color: #34d399;
-      border: 1px solid #059669;
-    }
-    .mini-badge.pin {
-      background: #1e2230;
-      color: #818cf8;
-      border: 1px solid var(--card-border);
     }
 
-    /* Voice Bar Mockup */
-    .voice-bar {
-      margin: 14px 16px 8px;
-      background: #0f1016;
-      border: 1px solid var(--card-border);
+    /* Banner de Instalação PWA */
+    .pwa-banner {
+      display: none;
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
+      border-bottom: 1px solid var(--accent);
+      padding: 10px 16px;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #e0e7ff;
+    }
+    .pwa-banner button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    /* Voice Bar */
+    .voice-card {
+      margin: 12px 14px 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
       border-radius: 14px;
       padding: 12px;
       display: flex;
       align-items: center;
       gap: 12px;
+      position: relative;
     }
 
-    .mic-button {
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
+    .mic-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 26px;
       background: var(--accent);
       border: none;
       color: #fff;
-      font-size: 20px;
+      font-size: 22px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 15px var(--accent-glow);
+      box-shadow: 0 0 16px var(--accent-glow);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
     }
-    .mic-button:hover {
-      transform: scale(1.05);
-      background: var(--accent-hover);
+    .mic-btn.recording {
+      background: var(--danger);
+      animation: pulse 1s infinite alternate;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+    }
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.08); }
     }
 
-    .voice-info {
+    .voice-details {
       flex: 1;
     }
-    .voice-status {
-      font-size: 13px;
+    .voice-status-title {
+      font-size: 14px;
       font-weight: 700;
       color: var(--success);
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
-    .voice-hint {
+    .voice-status-title.recording { color: var(--danger); }
+    .voice-status-title.processing { color: var(--warning); }
+    .voice-status-sub {
       font-size: 11px;
       color: var(--text-muted);
       margin-top: 2px;
     }
 
-    /* Lista de Tarefas */
-    .tasks-list {
-      padding: 12px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-height: 380px;
-      overflow-y: auto;
+    /* Toast de Feedback */
+    .toast-feedback {
+      margin: 0 14px 6px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      display: none;
+      text-align: center;
+    }
+    .toast-feedback.success {
+      background: #132e22;
+      border: 1px solid #059669;
+      color: #34d399;
+    }
+    .toast-feedback.error {
+      background: #3f1a1a;
+      border: 1px solid #ef4444;
+      color: #f87171;
     }
 
+    /* Controles de Lista */
+    .section-bar {
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
     .section-title {
       font-size: 11px;
       font-weight: 700;
       color: var(--text-muted);
       letter-spacing: 0.05em;
-      margin-bottom: 2px;
+    }
+
+    /* Controles de Zoom de Letra */
+    .font-zoom-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #181a24;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 6px;
+    }
+    .font-zoom-btn {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 2px 4px;
+    }
+    .font-zoom-val {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 28px;
+      text-align: center;
+    }
+
+    /* Lista de Tarefas */
+    .tasks-container {
+      padding: 0 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
     }
 
     .task-card {
-      background: #181a24;
-      border: 1px solid #232738;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
       border-radius: 10px;
       padding: 10px 12px;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 10px;
-      transition: all 0.2s ease;
+      transition: all 0.2s;
     }
-    .task-card:hover {
-      border-color: #3b4259;
+    .task-card.completed {
+      background: #101116;
+      opacity: 0.75;
     }
 
-    .task-check {
-      width: 18px;
-      height: 18px;
+    .task-checkbox {
+      width: 20px;
+      height: 20px;
+      margin-top: 2px;
       accent-color: var(--accent);
       cursor: pointer;
+      flex-shrink: 0;
     }
 
-    .task-content {
+    .task-body {
       flex: 1;
     }
-    .task-name {
-      font-size: 12px;
+    .task-title {
+      font-size: var(--font-size);
       font-weight: 500;
       color: var(--text);
+      line-height: 1.4;
+      word-break: break-word;
     }
-    .task-meta {
+    .task-card.completed .task-title {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .task-meta-row {
       display: flex;
       align-items: center;
       gap: 6px;
-      margin-top: 4px;
+      margin-top: 6px;
+      flex-wrap: wrap;
     }
 
-    .prio-pill {
+    /* Badges */
+    .prio-badge {
       font-size: 9px;
-      font-weight: 700;
+      font-weight: 800;
       padding: 2px 6px;
       border-radius: 4px;
       text-transform: uppercase;
     }
-    .prio-alta {
-      background: #451a1a;
-      color: #f87171;
-      border: 1px solid #ef4444;
-    }
-    .prio-media {
-      background: #3d2e0a;
-      color: #fbbf24;
-      border: 1px solid #f59e0b;
-    }
-    .prio-baixa {
-      background: #132e22;
-      color: #34d399;
-      border: 1px solid #10b981;
-    }
+    .prio-alta { background: #451a1a; color: #f87171; border: 1px solid #ef4444; }
+    .prio-media { background: #3d2e0a; color: #fbbf24; border: 1px solid #f59e0b; }
+    .prio-baixa { background: #132e22; color: #34d399; border: 1px solid #10b981; }
 
-    .task-time {
+    .time-badge {
       font-size: 10px;
       color: var(--text-muted);
     }
 
-    .timer-pill {
+    /* Botão de Cronômetro de Foco */
+    .focus-btn {
       font-size: 10px;
       font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #1e2230;
+      color: #a5b4fc;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 3px;
-      text-decoration: none;
+      transition: all 0.2s;
     }
-    .timer-pill.running {
+    .focus-btn.running {
       background: #065f46;
+      border-color: #10b981;
       color: #34d399;
-      border: 1px solid #10b981;
+      animation: glow 1.2s infinite alternate;
     }
-    .timer-pill.idle {
-      background: #232733;
-      color: #a5b4fc;
-      border: 1px solid #373e51;
+    @keyframes glow {
+      from { box-shadow: 0 0 4px rgba(16, 185, 129, 0.4); }
+      to { box-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
     }
-    .timer-pill.done {
+
+    .duration-tag {
+      font-size: 10px;
+      font-weight: 700;
       background: #132e22;
-      color: #34d399;
       border: 1px solid #059669;
+      color: #34d399;
+      padding: 2px 6px;
+      border-radius: 5px;
     }
 
-    /* Grid de Features */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-      max-width: 900px;
+    .del-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      padding: 4px;
+      cursor: pointer;
+      opacity: 0.6;
+    }
+    .del-btn:hover { color: var(--danger); opacity: 1; }
+
+    /* Barra Inferior Fixa para Entrada Manual */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
       width: 100%;
-      margin-bottom: 50px;
+      max-width: 480px;
+      background: #15161e;
+      border-top: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 40;
     }
 
-    .feature-item {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
+    .task-input {
+      flex: 1;
+      height: 38px;
+      border-radius: 8px;
+      background: #0c0d10;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0 12px;
+      font-size: 13px;
+      outline: none;
+    }
+    .task-input:focus { border-color: var(--accent); }
+
+    .prio-select {
+      height: 38px;
+      border-radius: 8px;
+      background: #1c1d27;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0 6px;
+      font-size: 11px;
+      outline: none;
+    }
+
+    .add-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Modal Config */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
       padding: 20px;
     }
-    .feature-icon {
-      font-size: 28px;
-      margin-bottom: 12px;
-    }
-    .feature-item h3 {
-      font-size: 16px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .feature-item p {
-      font-size: 13px;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-
-    footer {
-      font-size: 12px;
-      color: var(--text-muted);
-      text-align: center;
-      margin-top: auto;
-      padding-top: 20px;
+    .modal-card {
+      background: #181a24;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      width: 100%;
+      max-width: 360px;
     }
   </style>
 </head>
 <body>
 
-  <div class="hero">
-    <div class="badge-top">⚡ Powered by Groq Cloud & Firebase Firestore</div>
-    <h1>Voice Sticky Notes & Tasks</h1>
-    <p class="subtitle">
-      Aplicativo desktop flutuante Always-on-Top ultraleve (~40MB RAM) com controle instantâneo por voz usando Whisper Large v3 e Llama 3.3 70B.
-    </p>
-    <div class="btn-group">
-      <a href="https://github.com/eullon1234-creator/voice-tasks-app" class="btn btn-primary" target="_blank">
-        ⭐ Repositório no GitHub
-      </a>
-      <a href="#demo" class="btn btn-secondary">
-        👀 Ver Demonstração
-      </a>
+  <div class="app-shell">
+
+    <!-- Banner PWA para Celular -->
+    <div class="pwa-banner" id="pwaBanner">
+      <span>📱 Instalar no Celular (Tela Cheia)</span>
+      <button id="pwaInstallBtn">Instalar</button>
+    </div>
+
+    <!-- Cabeçalho -->
+    <header>
+      <div class="logo-area">
+        <span class="logo-text">⚡ Voice Tasks</span>
+      </div>
+      <div class="header-actions">
+        <span class="pill-btn cloud" title="Sincronizado com Firebase">🔥 Cloud</span>
+        <button class="pill-btn" onclick="openKeyModal()">🔑 API</button>
+      </div>
+    </header>
+
+    <!-- Voice Recording Card -->
+    <div class="voice-card">
+      <button class="mic-btn" id="micBtn" onclick="toggleVoiceRecording()">🎙</button>
+      <div class="voice-details">
+        <div class="voice-status-title" id="voiceStatusTitle">● Pronto</div>
+        <div class="voice-status-sub" id="voiceStatusSub">Toque no mic para falar um comando</div>
+      </div>
+    </div>
+
+    <!-- Toast de Feedback -->
+    <div class="toast-feedback" id="toastFeedback"></div>
+
+    <!-- Barra de Seção e Zoom de Letra -->
+    <div class="section-bar">
+      <div class="section-title" id="pendingHeader">A FAZER</div>
+      <div class="font-zoom-ctrl">
+        <button class="font-zoom-btn" onclick="adjustFontSize(-2)">A-</button>
+        <span class="font-zoom-val" id="fontSizeDisplay">15px</span>
+        <button class="font-zoom-btn" onclick="adjustFontSize(2)">A+</button>
+      </div>
+    </div>
+
+    <!-- Lista de Tarefas -->
+    <div class="tasks-container" id="tasksList">
+      <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
+        Carregando tarefas do Firebase...
+      </div>
+    </div>
+
+    <!-- Seção Concluídas -->
+    <div class="section-bar" id="compSectionBar" style="display: none; margin-top: 16px;">
+      <div class="section-title" id="completedHeader">CONCLUÍDAS</div>
+      <button class="pill-btn" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);" onclick="clearCompletedTasks()">Limpar todas</button>
+    </div>
+    <div class="tasks-container" id="completedList"></div>
+
+    <!-- Barra Inferior de Entrada Manual -->
+    <div class="bottom-bar">
+      <input type="text" class="task-input" id="manualInput" placeholder="Nova tarefa manual..." onkeypress="if(event.key==='Enter') addManualTask()">
+      <select class="prio-select" id="prioSelect">
+        <option value="media">Média</option>
+        <option value="alta">Alta</option>
+        <option value="baixa">Baixa</option>
+      </select>
+      <button class="add-btn" onclick="addManualTask()">＋</button>
+    </div>
+
+  </div>
+
+  <!-- Modal de Chave de API Groq -->
+  <div class="modal-overlay" id="keyModal">
+    <div class="modal-card">
+      <h3 style="font-size: 15px; margin-bottom: 8px;">🔑 Configurar Groq API Key</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">
+        Sua chave é salva no celular para transcrição rápida com Whisper Large v3 e Llama 3.3 70B.
+      </p>
+      <input type="password" id="groqKeyInput" class="task-input" style="width: 100%; margin-bottom: 14px;" placeholder="gsk_...">
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="pill-btn" onclick="closeKeyModal()">Cancelar</button>
+        <button class="pill-btn" style="background: var(--accent); color: #fff;" onclick="saveGroqKey()">Salvar</button>
+      </div>
     </div>
   </div>
 
-  <!-- Preview Interativo do App -->
-  <div class="app-preview-container" id="demo">
-    <div class="preview-header">
-      <div class="preview-title">⚡ Voice Tasks</div>
-      <div class="preview-badges">
-        <span class="mini-badge cloud">🔥 Cloud (Firebase)</span>
-        <span class="mini-badge pin">📌 Fixado</span>
-      </div>
-    </div>
+  <script>
+    // ==================== 1. Firebase Initialization ====================
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzWvpxdcJF2Fp5SoCBZwXjKDKMu6ZMIt8",
+      authDomain: "eullon-teste.firebaseapp.com",
+      projectId: "eullon-teste",
+      storageBucket: "eullon-teste.firebasestorage.app",
+      messagingSenderId: "766029786082",
+      appId: "1:766029786082:web:4473db27d2eb69a66ea7bb"
+    };
 
-    <!-- Barra de Voz -->
-    <div class="voice-bar">
-      <button class="mic-button" title="Clique para simular gravação">🎙</button>
-      <div class="voice-info">
-        <div class="voice-status">● Pronto</div>
-        <div class="voice-hint">Atalho: Ctrl + Shift + Espaço</div>
-      </div>
-    </div>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const tasksCol = db.collection("tasks");
 
-    <!-- Lista -->
-    <div class="tasks-list">
-      <div class="section-title">A FAZER (3)</div>
+    let currentTasks = [];
+    let defaultGroqKey = "";
 
-      <div class="task-card">
-        <input type="checkbox" class="task-check">
-        <div class="task-content">
-          <div class="task-name">Ligar pro fornecedor às 15h</div>
-          <div class="task-meta">
-            <span class="prio-pill prio-alta">Alta</span>
-            <span class="task-time">🕒 15:00</span>
-            <span class="timer-pill running">⏸ 03:42</span>
+    // ==================== 2. Real-time Firebase Sync ====================
+    tasksCol.onSnapshot((snapshot) => {
+      currentTasks = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        data.id = doc.id;
+        currentTasks.push(data);
+      });
+      renderTasks();
+    }, (error) => {
+      console.warn("Firestore onSnapshot error:", error);
+      showFeedback("Aguardando liberação de regras do Firestore", true);
+    });
+
+    // ==================== 3. Renderização de Tarefas & Cronômetro ====================
+    let fontSize = parseInt(localStorage.getItem('vt_fontsize') || '15');
+    applyFontSize(fontSize);
+
+    function adjustFontSize(delta) {
+      fontSize = Math.max(12, Math.min(24, fontSize + delta));
+      localStorage.setItem('vt_fontsize', fontSize);
+      applyFontSize(fontSize);
+    }
+
+    function applyFontSize(size) {
+      document.documentElement.style.setProperty('--font-size', size + 'px');
+      document.getElementById('fontSizeDisplay').textContent = size + 'px';
+      renderTasks();
+    }
+
+    function formatDuration(sec) {
+      if (sec < 60) return sec + 's';
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      if (m < 60) return m + 'm ' + (s < 10 ? '0' : '') + s + 's';
+      const h = Math.floor(m / 60);
+      const remM = m % 60;
+      return h + 'h ' + remM + 'm';
+    }
+
+    function formatStopwatch(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      const h = Math.floor(m / 60);
+      const remM = m % 60;
+      if (h > 0) return `${h.toString().padStart(2, '0')}:${remM.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function getElapsedSeconds(task) {
+      let total = task.elapsed_seconds || 0;
+      if (task.timer_running && task.timer_started_at) {
+        const start = new Date(task.timer_started_at).getTime();
+        const diff = Math.floor((Date.now() - start) / 1000);
+        total += Math.max(0, diff);
+      }
+      return total;
+    }
+
+    function renderTasks() {
+      const pendingList = document.getElementById('tasksList');
+      const completedList = document.getElementById('completedList');
+      const compSection = document.getElementById('compSectionBar');
+
+      const pending = currentTasks.filter(t => !t.completed);
+      const completed = currentTasks.filter(t => t.completed);
+
+      document.getElementById('pendingHeader').textContent = `A FAZER (${pending.length})`;
+      document.getElementById('completedHeader').textContent = `CONCLUÍDAS (${completed.length})`;
+
+      // Render A Fazer
+      if (pending.length === 0) {
+        pendingList.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">Nenhuma pendência! Use o microfone ou digite abaixo.</div>`;
+      } else {
+        pendingList.innerHTML = pending.map(t => {
+          const elapsed = getElapsedSeconds(t);
+          const isRunning = !!t.timer_running;
+          const stopwatchText = isRunning ? `⏸ ${formatStopwatch(elapsed)}` : (elapsed > 0 ? `▶ Continuar (${formatStopwatch(elapsed)})` : `▶ Iniciar`);
+          const timerClass = isRunning ? 'focus-btn running' : 'focus-btn';
+
+          return `
+            <div class="task-card" id="card-${t.id}">
+              <input type="checkbox" class="task-checkbox" onchange="toggleTask('${t.id}')">
+              <div class="task-body">
+                <div class="task-title">${escapeHtml(t.title)}</div>
+                <div class="task-meta-row">
+                  <span class="prio-badge prio-${t.priority || 'media'}">${(t.priority || 'media').toUpperCase()}</span>
+                  ${t.due_time ? `<span class="time-badge">🕒 ${escapeHtml(t.due_time)}</span>` : ''}
+                  <button class="${timerClass}" onclick="toggleTimer('${t.id}')">${stopwatchText}</button>
+                </div>
+              </div>
+              <button class="del-btn" onclick="deleteTask('${t.id}')">✕</button>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Render Concluídas
+      if (completed.length === 0) {
+        compSection.style.display = 'none';
+        completedList.innerHTML = '';
+      } else {
+        compSection.style.display = 'flex';
+        completedList.innerHTML = completed.map(t => `
+          <div class="task-card completed">
+            <input type="checkbox" class="task-checkbox" checked onchange="toggleTask('${t.id}')">
+            <div class="task-body">
+              <div class="task-title">${escapeHtml(t.title)}</div>
+              <div class="task-meta-row">
+                ${t.completed_duration ? `<span class="duration-tag">⏱️ Feito em ${escapeHtml(t.completed_duration)}</span>` : ''}
+              </div>
+            </div>
+            <button class="del-btn" onclick="deleteTask('${t.id}')">✕</button>
           </div>
-        </div>
-      </div>
+        `).join('');
+      }
+    }
 
-      <div class="task-card">
-        <input type="checkbox" class="task-check">
-        <div class="task-content">
-          <div class="task-name">Revisar relatório do mês</div>
-          <div class="task-meta">
-            <span class="prio-pill prio-media">Média</span>
-            <span class="task-time">🕒 Hoje</span>
-            <span class="timer-pill idle">▶ Iniciar</span>
-          </div>
-        </div>
-      </div>
+    // Loop de contagem ao vivo para tarefas em foco
+    setInterval(() => {
+      currentTasks.forEach(t => {
+        if (t.timer_running && !t.completed) {
+          const card = document.getElementById(`card-${t.id}`);
+          if (card) {
+            const btn = card.querySelector('.focus-btn');
+            if (btn) {
+              const elapsed = getElapsedSeconds(t);
+              btn.textContent = `⏸ ${formatStopwatch(elapsed)}`;
+            }
+          }
+        }
+      });
+    }, 1000);
 
-      <div class="task-card">
-        <input type="checkbox" class="task-check" checked>
-        <div class="task-content">
-          <div class="task-name" style="text-decoration: line-through; color: var(--text-muted);">Comprar café</div>
-          <div class="task-meta">
-            <span class="timer-pill done">⏱️ Feito em 12m 30s</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+    // ==================== 4. Ações de Tarefas (CRUD Firestore) ====================
+    async function addManualTask() {
+      const input = document.getElementById('manualInput');
+      const title = input.value.trim();
+      if (!title) return;
 
-  <!-- Features Grid -->
-  <div class="features-grid">
-    <div class="feature-item">
-      <div class="feature-icon">🎙️</div>
-      <h3>Comandos por Voz Instantâneos</h3>
-      <p>Gravação de áudio direto em memória sem travar a interface e interpretação por IA ultraveloz via Groq Cloud.</p>
-    </div>
+      const priority = document.getElementById('prioSelect').value;
+      const id = 't' + (Date.now() % 10000);
 
-    <div class="feature-item">
-      <div class="feature-icon">⏱️</div>
-      <h3>Cronômetro de Foco & Produtividade</h3>
-      <p>Clique em "Iniciar Tarefa" para focar! O app conta o tempo ao vivo e salva exatamente quanto tempo você levou para concluir.</p>
-    </div>
+      const newTask = {
+        id,
+        title,
+        completed: false,
+        priority,
+        due_time: null,
+        created_at: new Date().toISOString(),
+        timer_running: false,
+        timer_started_at: null,
+        elapsed_seconds: 0,
+        completed_duration: null
+      };
 
-    <div class="feature-item">
-      <div class="feature-icon">🔥</div>
-      <h3>Firebase Firestore Híbrido</h3>
-      <p>Sincronização em tempo real na nuvem aliada a um cache local atômico para funcionamento mesmo sem internet.</p>
-    </div>
+      input.value = '';
+      await tasksCol.doc(id).set(newTask);
+      showFeedback("Tarefa adicionada!");
+    }
 
-    <div class="feature-item">
-      <div class="feature-icon">🔍</div>
-      <h3>Zoom de Letras (A+ / A-)</h3>
-      <p>Aumente ou diminua o tamanho das letras com um clique ou atalhos de teclado (Ctrl + e Ctrl -) para máximo conforto visual.</p>
-    </div>
-  </div>
+    async function toggleTask(id) {
+      const task = currentTasks.find(t => t.id === id);
+      if (!task) return;
 
-  <footer>
-    Desenvolvido para alta produtividade • Criado por <a href="https://github.com/eullon1234-creator" target="_blank" style="color: #a5b4fc; text-decoration: none;">eullon1234-creator</a>
-  </footer>
+      const newState = !task.completed;
+      const updates = { completed: newState };
+
+      if (newState) {
+        // Concluída
+        let total = task.elapsed_seconds || 0;
+        if (task.timer_running && task.timer_started_at) {
+          const start = new Date(task.timer_started_at).getTime();
+          total += Math.max(0, Math.floor((Date.now() - start) / 1000));
+        }
+        updates.timer_running = false;
+        updates.timer_started_at = null;
+        if (total > 0) updates.completed_duration = formatDuration(total);
+        showFeedback(updates.completed_duration ? `🎉 Feito em ${updates.completed_duration}!` : "Tarefa concluída!");
+      } else {
+        updates.timer_running = false;
+        updates.timer_started_at = null;
+        showFeedback("Tarefa reaberta!");
+      }
+
+      await tasksCol.doc(id).update(updates);
+    }
+
+    async function toggleTimer(id) {
+      const task = currentTasks.find(t => t.id === id);
+      if (!task) return;
+
+      if (task.timer_running) {
+        // Pausar
+        let total = task.elapsed_seconds || 0;
+        if (task.timer_started_at) {
+          const start = new Date(task.timer_started_at).getTime();
+          total += Math.max(0, Math.floor((Date.now() - start) / 1000));
+        }
+        await tasksCol.doc(id).update({
+          timer_running: false,
+          timer_started_at: null,
+          elapsed_seconds: total
+        });
+        showFeedback("⏸️ Tarefa pausada.");
+      } else {
+        // Iniciar
+        // Pausa outras tarefas ativas
+        const batch = db.batch();
+        currentTasks.forEach(other => {
+          if (other.timer_running && other.id !== id) {
+            let tot = other.elapsed_seconds || 0;
+            if (other.timer_started_at) {
+              const s = new Date(other.timer_started_at).getTime();
+              tot += Math.max(0, Math.floor((Date.now() - s) / 1000));
+            }
+            batch.update(tasksCol.doc(other.id), {
+              timer_running: false,
+              timer_started_at: null,
+              elapsed_seconds: tot
+            });
+          }
+        });
+        batch.update(tasksCol.doc(id), {
+          timer_running: true,
+          timer_started_at: new Date().toISOString()
+        });
+        await batch.commit();
+        showFeedback("⏱️ Foco iniciado! Contando tempo...");
+      }
+    }
+
+    async function deleteTask(id) {
+      await tasksCol.doc(id).delete();
+      showFeedback("Tarefa excluída.");
+    }
+
+    async function clearCompletedTasks() {
+      const completed = currentTasks.filter(t => t.completed);
+      const batch = db.batch();
+      completed.forEach(t => batch.delete(tasksCol.doc(t.id)));
+      await batch.commit();
+      showFeedback(`${completed.length} tarefas limpas!`);
+    }
+
+    // ==================== 5. Gravação de Voz & Groq AI no Celular ====================
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    async function toggleVoiceRecording() {
+      const micBtn = document.getElementById('micBtn');
+      const title = document.getElementById('voiceStatusTitle');
+      const sub = document.getElementById('voiceStatusSub');
+
+      const groqKey = (localStorage.getItem('vt_groq_key') || defaultGroqKey || '').trim();
+      if (!groqKey) {
+        openKeyModal();
+        showFeedback("Por favor, insira sua Groq API Key para falar", true);
+        return;
+      }
+
+      if (!isRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioChunks = [];
+          mediaRecorder = new MediaRecorder(stream);
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            processAudioWithGroq(audioBlob);
+          };
+
+          mediaRecorder.start();
+          isRecording = true;
+          micBtn.classList.add('recording');
+          micBtn.textContent = '⏹';
+          title.textContent = '● Gravando...';
+          title.className = 'voice-status-title recording';
+          sub.textContent = 'Fale agora... Toque novamente para processar';
+        } catch (err) {
+          console.error(err);
+          showFeedback("Permissão de microfone negada.", true);
+        }
+      } else {
+        // Para gravação
+        isRecording = false;
+        micBtn.classList.remove('recording');
+        micBtn.textContent = '🎙';
+        title.textContent = '● Processando IA...';
+        title.className = 'voice-status-title processing';
+        sub.textContent = 'Transcrevendo e interpretando com Groq...';
+
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+          mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+      }
+    }
+
+    async function processAudioWithGroq(audioBlob) {
+      const title = document.getElementById('voiceStatusTitle');
+      const sub = document.getElementById('voiceStatusSub');
+      const groqKey = localStorage.getItem('vt_groq_key') || defaultGroqKey;
+
+      try {
+        // 1. STT Whisper Large v3
+        const formData = new FormData();
+        formData.append('file', audioBlob, 'voice.wav');
+        formData.append('model', 'whisper-large-v3');
+        formData.append('language', 'pt');
+
+        const sttResp = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${groqKey}` },
+          body: formData
+        });
+
+        if (!sttResp.ok) throw new Error('Erro na transcrição de áudio.');
+        const sttData = await sttResp.json();
+        const transcription = (sttData.text || '').trim();
+
+        if (!transcription) throw new Error('Nenhuma fala detectada.');
+
+        // 2. LLM Llama 3.3 70B (Intenção estruturada)
+        const systemPrompt = `Você é o processador de comandos de um aplicativo de tarefas. 
+Analise a transcrição de voz do usuário e o estado atual das tarefas. Retorne APENAS um JSON válido no seguinte formato:
+{
+  "action": "add" | "toggle_complete" | "delete" | "clear_completed" | "none",
+  "task_id": "string com o id caso a ação seja toggle ou delete, senão null",
+  "task_title": "título normalizado da tarefa (sem comandos de voz redundantes)",
+  "priority": "baixa" | "media" | "alta",
+  "due_time": "horário ou data extraída caso mencionada, senão null",
+  "feedback_message": "frase curta (máx 5 palavras) confirmando a ação"
+}`;
+
+        const tasksContext = currentTasks.map(t => ({
+          id: t.id,
+          title: t.title,
+          completed: t.completed,
+          priority: t.priority,
+          due_time: t.due_time
+        }));
+
+        const llmResp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${groqKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: JSON.stringify({ voice_input: transcription, current_tasks: tasksContext }) }
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.1
+          })
+        });
+
+        if (!llmResp.ok) throw new Error('Erro no processamento da IA.');
+        const llmData = await llmResp.json();
+        const parsed = JSON.parse(llmData.choices[0].message.content);
+
+        // Executa a ação no Firebase
+        if (parsed.action === 'add' && parsed.task_title) {
+          const id = 't' + (Date.now() % 10000);
+          await tasksCol.doc(id).set({
+            id,
+            title: parsed.task_title,
+            completed: false,
+            priority: parsed.priority || 'media',
+            due_time: parsed.due_time || null,
+            created_at: new Date().toISOString(),
+            timer_running: false,
+            timer_started_at: null,
+            elapsed_seconds: 0,
+            completed_duration: null
+          });
+        } else if (parsed.action === 'toggle_complete') {
+          let tid = parsed.task_id;
+          if (!tid && parsed.task_title) {
+            const m = currentTasks.find(t => t.title.toLowerCase().includes(parsed.task_title.toLowerCase()));
+            if (m) tid = m.id;
+          }
+          if (tid) toggleTask(tid);
+        } else if (parsed.action === 'delete') {
+          let tid = parsed.task_id;
+          if (!tid && parsed.task_title) {
+            const m = currentTasks.find(t => t.title.toLowerCase().includes(parsed.task_title.toLowerCase()));
+            if (m) tid = m.id;
+          }
+          if (tid) deleteTask(tid);
+        } else if (parsed.action === 'clear_completed') {
+          clearCompletedTasks();
+        }
+
+        showFeedback(`${parsed.feedback_message || 'Comando executado!'} ('${transcription}')`);
+      } catch (e) {
+        console.error(e);
+        showFeedback(e.message || "Erro no comando de voz", true);
+      } finally {
+        title.textContent = '● Pronto';
+        title.className = 'voice-status-title';
+        sub.textContent = 'Toque no mic para falar um comando';
+      }
+    }
+
+    // ==================== 6. PWA & UI Utilities ====================
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const banner = document.getElementById('pwaBanner');
+      if (banner) banner.style.display = 'flex';
+    });
+
+    document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice.outcome === 'accepted') {
+          document.getElementById('pwaBanner').style.display = 'none';
+        }
+        deferredPrompt = null;
+      }
+    });
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(console.warn);
+    }
+
+    function showFeedback(msg, isErr = false) {
+      const toast = document.getElementById('toastFeedback');
+      toast.textContent = msg;
+      toast.className = 'toast-feedback ' + (isErr ? 'error' : 'success');
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    }
+
+    function openKeyModal() {
+      document.getElementById('groqKeyInput').value = localStorage.getItem('vt_groq_key') || defaultGroqKey;
+      document.getElementById('keyModal').style.display = 'flex';
+    }
+
+    function closeKeyModal() {
+      document.getElementById('keyModal').style.display = 'none';
+    }
+
+    function saveGroqKey() {
+      const val = document.getElementById('groqKeyInput').value.trim();
+      if (val) localStorage.setItem('vt_groq_key', val);
+      closeKeyModal();
+      showFeedback("Chave Groq salva!");
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
 
 </body>
 </html>

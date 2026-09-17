@@ -14,3 +14,4 @@ env/
 
 # Temporary test files
 temp_tasks.json
+settings.json

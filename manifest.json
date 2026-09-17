@@ -1,0 +1,24 @@
+{
+  "name": "Voice Tasks • Anotações & Foco",
+  "short_name": "Voice Tasks",
+  "description": "Aplicativo de anotações e tarefas por voz com Groq AI e Firebase Firestore",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0c0d10",
+  "theme_color": "#14161d",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
