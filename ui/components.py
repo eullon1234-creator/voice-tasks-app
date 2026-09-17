@@ -34,6 +34,7 @@ class TaskItemCard(ctk.CTkFrame):
         task: Dict[str, Any],
         on_toggle: Callable[[str], None],
         on_delete: Callable[[str], None],
+        font_size: int = 15,
         **kwargs
     ):
         super().__init__(master, corner_radius=8, **kwargs)
@@ -42,6 +43,7 @@ class TaskItemCard(ctk.CTkFrame):
         self.completed = task.get("completed", False)
         self.on_toggle = on_toggle
         self.on_delete = on_delete
+        self.font_size = font_size
 
         # Cores conforme estado
         bg_color = THEME["card_bg"] if not self.completed else "#18181b"
@@ -56,26 +58,27 @@ class TaskItemCard(ctk.CTkFrame):
         self.grid_columnconfigure(1, weight=1)
 
         # 1. Checkbox
+        box_size = max(18, min(24, font_size + 4))
         self.check_var = ctk.BooleanVar(value=self.completed)
         self.checkbox = ctk.CTkCheckBox(
             self,
             text="",
             variable=self.check_var,
-            width=20,
-            height=20,
-            checkbox_width=18,
-            checkbox_height=18,
+            width=box_size,
+            height=box_size,
+            checkbox_width=box_size,
+            checkbox_height=box_size,
             corner_radius=5,
             border_color=THEME["accent"] if not self.completed else THEME["text_muted"],
             fg_color=THEME["accent"],
             hover_color=THEME["accent_hover"],
             command=self._handle_toggle
         )
-        self.checkbox.grid(row=0, column=0, rowspan=2, padx=(10, 6), pady=8, sticky="w")
+        self.checkbox.grid(row=0, column=0, rowspan=2, padx=(10, 8), pady=8, sticky="w")
 
         # 2. Informações de Título
         title_color = THEME["text_primary"] if not self.completed else THEME["text_muted"]
-        font_style = ("Segoe UI", 12) if not self.completed else ("Segoe UI", 12, "overstrike")
+        font_style = ("Segoe UI", self.font_size) if not self.completed else ("Segoe UI", self.font_size, "overstrike")
         
         self.title_label = ctk.CTkLabel(
             self,
@@ -83,7 +86,7 @@ class TaskItemCard(ctk.CTkFrame):
             font=font_style,
             text_color=title_color,
             anchor="w",
-            wraplength=220,
+            wraplength=240,
             justify="left"
         )
         self.title_label.grid(row=0, column=1, padx=(0, 6), pady=(6, 2), sticky="w")
@@ -98,10 +101,11 @@ class TaskItemCard(ctk.CTkFrame):
 
         due_time = task.get("due_time")
         if due_time:
+            meta_font_size = max(10, self.font_size - 3)
             time_label = ctk.CTkLabel(
                 meta_frame,
                 text=f"🕒 {due_time}",
-                font=("Segoe UI", 10),
+                font=("Segoe UI", meta_font_size),
                 text_color=THEME["text_muted"]
             )
             time_label.pack(side="left")

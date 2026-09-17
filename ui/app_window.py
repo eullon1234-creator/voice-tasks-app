@@ -1,11 +1,12 @@
 import threading
 import time
+import json
 import customtkinter as ctk
 from typing import Optional, Dict, Any
 
 from config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_ALPHA, ALWAYS_ON_TOP,
-    THEME, STATUS_CONFIG, GLOBAL_HOTKEY
+    THEME, STATUS_CONFIG, GLOBAL_HOTKEY, SETTINGS_FILE, DEFAULT_FONT_SIZE
 )
 from storage import TaskStorage
 from audio_recorder import AudioRecorder
@@ -42,6 +43,14 @@ class AppWindow(ctk.CTk):
         self.current_status = "ready"
         self._feedback_timer = None
         self._rms_timer = None
+
+        # Tamanho de Fonte Configurável & Persistente
+        self.font_size = self._load_font_setting()
+
+        # Atalhos de Teclado para Zoom de Fonte (Ctrl + / Ctrl -)
+        self.bind("<Control-plus>", lambda e: self._increase_font_size())
+        self.bind("<Control-equal>", lambda e: self._increase_font_size())
+        self.bind("<Control-minus>", lambda e: self._decrease_font_size())
 
         # Constrói a interface
         self._build_ui()
@@ -302,6 +311,47 @@ class AppWindow(ctk.CTk):
         )
         pend_title.pack(side="left")
 
+        # Controles de Zoom de Fonte (A- / A+)
+        font_ctrl_frame = ctk.CTkFrame(pend_header, fg_color="transparent")
+        font_ctrl_frame.pack(side="right")
+
+        btn_font_dec = ctk.CTkButton(
+            font_ctrl_frame,
+            text="A-",
+            font=("Segoe UI", 10, "bold"),
+            width=26,
+            height=20,
+            corner_radius=4,
+            fg_color=THEME["card_bg"],
+            hover_color=THEME["card_hover"],
+            text_color=THEME["text_secondary"],
+            command=self._decrease_font_size
+        )
+        btn_font_dec.pack(side="left", padx=(0, 2))
+
+        lbl_font = ctk.CTkLabel(
+            font_ctrl_frame,
+            text=f"{self.font_size}px",
+            font=("Segoe UI", 10, "bold"),
+            text_color=THEME["accent"],
+            width=36
+        )
+        lbl_font.pack(side="left")
+
+        btn_font_inc = ctk.CTkButton(
+            font_ctrl_frame,
+            text="A+",
+            font=("Segoe UI", 10, "bold"),
+            width=26,
+            height=20,
+            corner_radius=4,
+            fg_color=THEME["card_bg"],
+            hover_color=THEME["card_hover"],
+            text_color=THEME["text_secondary"],
+            command=self._increase_font_size
+        )
+        btn_font_inc.pack(side="left", padx=(2, 0))
+
         if not pending_tasks:
             empty_lbl = ctk.CTkLabel(
                 self.scroll_container,
@@ -317,7 +367,8 @@ class AppWindow(ctk.CTk):
                     self.scroll_container,
                     task=task,
                     on_toggle=self._handle_toggle_task,
-                    on_delete=self._handle_delete_task
+                    on_delete=self._handle_delete_task,
+                    font_size=self.font_size
                 )
                 card.pack(fill="x", pady=3)
 
@@ -352,7 +403,8 @@ class AppWindow(ctk.CTk):
                     self.scroll_container,
                     task=task,
                     on_toggle=self._handle_toggle_task,
-                    on_delete=self._handle_delete_task
+                    on_delete=self._handle_delete_task,
+                    font_size=self.font_size
                 )
                 card.pack(fill="x", pady=2)
 
@@ -508,3 +560,35 @@ class AppWindow(ctk.CTk):
                 f"{self.storage.filepath.parent}\n\n"
                 "O app detectará e ativará a nuvem automaticamente ao reiniciar!"
             )
+
+    def _load_font_setting(self) -> int:
+        try:
+            if SETTINGS_FILE.is_file():
+                with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    val = int(data.get("font_size", DEFAULT_FONT_SIZE))
+                    return max(12, min(24, val))
+        except Exception:
+            pass
+        return DEFAULT_FONT_SIZE
+
+    def _save_font_setting(self):
+        try:
+            with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+                json.dump({"font_size": self.font_size}, f)
+        except Exception:
+            pass
+
+    def _increase_font_size(self):
+        if self.font_size < 24:
+            self.font_size += 2
+            self._save_font_setting()
+            self._refresh_tasks_view()
+            self.show_feedback(f"Fonte aumentada: {self.font_size}px")
+
+    def _decrease_font_size(self):
+        if self.font_size > 12:
+            self.font_size -= 2
+            self._save_font_setting()
+            self._refresh_tasks_view()
+            self.show_feedback(f"Fonte diminuída: {self.font_size}px")

@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent
 ENV_FILE = BASE_DIR / ".env"
 DATA_FILE = BASE_DIR / "tasks.json"
+SETTINGS_FILE = BASE_DIR / "settings.json"
+DEFAULT_FONT_SIZE = 15
 
 # Carrega variáveis de ambiente
 load_dotenv(dotenv_path=ENV_FILE)
