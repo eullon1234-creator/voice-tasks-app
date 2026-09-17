@@ -9,7 +9,7 @@ from pathlib import Path
 
 from config import (
     DATA_FILE, FIREBASE_CREDENTIALS_PATH, FIREBASE_COLLECTION,
-    FIREBASE_PROJECT_ID, FIREBASE_API_KEY
+    FIREBASE_PROJECT_ID, FIREBASE_API_KEY, DEFAULT_DAILY_GOAL_MINUTES
 )
 
 logger = logging.getLogger("TaskStorage")
@@ -260,7 +260,13 @@ class TaskStorage:
         with self._lock:
             return [t for t in self.tasks if t.get("completed", False)]
 
-    def add_task(self, title: str, priority: str = "media", due_time: Optional[str] = None) -> Dict[str, Any]:
+    def add_task(
+        self,
+        title: str,
+        priority: str = "media",
+        due_time: Optional[str] = None,
+        category: str = "Geral"
+    ) -> Dict[str, Any]:
         clean_title = (title or "").strip()
         if not clean_title:
             raise ValueError("Título da tarefa não pode ser vazio")
@@ -270,13 +276,21 @@ class TaskStorage:
         if norm_priority not in valid_priorities:
             norm_priority = "media"
 
+        valid_categories = {"Trabalho", "Pessoal", "Estudos", "Geral"}
+        norm_cat = category.strip().capitalize() if category else "Geral"
+        if norm_cat not in valid_categories:
+            norm_cat = "Geral"
+
         new_task = {
             "id": self._generate_id(),
             "title": clean_title,
             "completed": False,
             "priority": norm_priority,
             "due_time": due_time.strip() if due_time else None,
+            "category": norm_cat,
+            "reminded": False,
             "created_at": datetime.now().isoformat(),
+            "completed_at": None,
             "timer_running": False,
             "timer_started_at": None,
             "elapsed_seconds": 0,
@@ -367,10 +381,12 @@ class TaskStorage:
                         total_sec = t.get("elapsed_seconds", 0)
                         if total_sec > 0:
                             t["completed_duration"] = format_duration(total_sec)
+                        t["completed_at"] = datetime.now().isoformat()
                     else:
                         # Tarefa reaberta
                         t["timer_running"] = False
                         t["timer_started_at"] = None
+                        t["completed_at"] = None
 
                     updated_task = dict(t)
                     break
@@ -483,5 +499,108 @@ class TaskStorage:
                 completed,
                 key=lambda x: x.get("created_at", ""),
                 reverse=True
-            )[:6]
+            )[:6],
+            "streak_days": self.calculate_streak()
         }
+
+    def calculate_streak(self) -> int:
+        """
+        Calcula dias consecutivos com atividade (tarefa completada ou criada/focada).
+        Retorna quantidade de dias seguidos (streak).
+        """
+        from datetime import date, timedelta
+        active_dates = set()
+        with self._lock:
+            for t in self.tasks:
+                if t.get("completed"):
+                    ts = t.get("completed_at") or t.get("created_at")
+                    if ts:
+                        try:
+                            dt = datetime.fromisoformat(ts).date()
+                            active_dates.add(dt)
+                        except Exception:
+                            pass
+                elif self.get_task_current_elapsed(t) > 30:
+                    ts = t.get("created_at")
+                    if ts:
+                        try:
+                            dt = datetime.fromisoformat(ts).date()
+                            active_dates.add(dt)
+                        except Exception:
+                            pass
+
+        if not active_dates:
+            return 0
+
+        today = date.today()
+        streak = 0
+        current_check = today
+
+        # Se hoje ainda não teve atividade, permite que o streak continue a partir de ontem
+        if today not in active_dates:
+            current_check = today - timedelta(days=1)
+            if current_check not in active_dates:
+                return 0
+
+        while current_check in active_dates:
+            streak += 1
+            current_check -= timedelta(days=1)
+
+        return streak
+
+    def get_daily_goal_progress(self, goal_minutes: int = DEFAULT_DAILY_GOAL_MINUTES) -> Dict[str, Any]:
+        """Calcula o progresso da meta diária de foco em minutos."""
+        from datetime import date
+        today = date.today()
+        today_seconds = 0
+        with self._lock:
+            for t in self.tasks:
+                ts = t.get("created_at")
+                is_today = False
+                if ts:
+                    try:
+                        if datetime.fromisoformat(ts).date() == today:
+                            is_today = True
+                    except Exception:
+                        pass
+                if is_today or t.get("timer_running"):
+                    today_seconds += self.get_task_current_elapsed(t)
+
+        goal_seconds = max(1, goal_minutes * 60)
+        pct = min(100, int((today_seconds / goal_seconds) * 100))
+        return {
+            "goal_minutes": goal_minutes,
+            "today_seconds": today_seconds,
+            "today_formatted": format_duration(today_seconds),
+            "percentage": pct,
+            "streak_days": self.calculate_streak()
+        }
+
+    def get_due_reminders(self) -> List[Dict[str, Any]]:
+        """Retorna tarefas pendentes com due_time no horário atual que ainda não foram lembradas."""
+        now_time = datetime.now().strftime("%H:%M")
+        due_list = []
+        with self._lock:
+            for t in self.tasks:
+                if not t.get("completed") and t.get("due_time") and not t.get("reminded", False):
+                    dt_val = str(t["due_time"]).strip()
+                    if dt_val == now_time or dt_val.endswith(now_time):
+                        due_list.append(dict(t))
+        return due_list
+
+    def mark_reminded(self, task_id: str):
+        """Marca uma tarefa como já notificada."""
+        with self._lock:
+            for t in self.tasks:
+                if t.get("id") == task_id:
+                    t["reminded"] = True
+                    self._save_local()
+                    break
+
+    def get_tasks_by_category(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Retorna tarefas filtradas por categoria."""
+        with self._lock:
+            if not category or category == "Todas":
+                return list(self.tasks)
+            return [t for t in self.tasks if t.get("category", "Geral").lower() == category.lower()]
+

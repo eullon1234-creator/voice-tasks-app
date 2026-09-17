@@ -572,6 +572,97 @@
       box-shadow: 0 4px 15px var(--accent-glow);
     }
     .copy-report-btn:hover { background: var(--accent-hover); }
+
+    /* Gamificação & Streaks */
+    .streak-banner {
+      margin: 10px 14px 4px;
+      background: #161722;
+      border: 1px solid #282a3d;
+      border-radius: 10px;
+      padding: 8px 12px;
+    }
+    .streak-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .streak-fire {
+      font-size: 12px;
+      font-weight: 700;
+      color: #f59e0b;
+    }
+    .streak-goal {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .streak-bar-track {
+      height: 5px;
+      background: #0d0e14;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .streak-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #10b981);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    /* Filtro de Categorias Mobile */
+    .cat-filter-bar {
+      display: flex;
+      gap: 6px;
+      padding: 6px 14px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .cat-filter-bar::-webkit-scrollbar { display: none; }
+    .cat-pill {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .cat-pill.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* Badges de Categoria no Card */
+    .cat-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 6px;
+      border: 1px solid;
+      background: #181920;
+    }
+    .cat-badge.cat-Trabalho { border-color: #60a5fa; color: #60a5fa; }
+    .cat-badge.cat-Pessoal { border-color: #f472b6; color: #f472b6; }
+    .cat-badge.cat-Estudos { border-color: #a78bfa; color: #a78bfa; }
+    .cat-badge.cat-Geral { border-color: #34d399; color: #34d399; }
+
+    /* Select de Categoria no Bottom Bar */
+    .cat-select {
+      background: #1c1d27;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 0 6px;
+      font-size: 11px;
+      font-weight: 600;
+      height: 38px;
+      outline: none;
+    }
   </style>
 </head>
 <body>
@@ -603,6 +694,26 @@
 
     <!-- ABA 1: TAREFAS -->
     <div id="tabTasksView">
+      <!-- Gamificação & Streaks -->
+      <div class="streak-banner" id="streakBanner">
+        <div class="streak-top">
+          <span class="streak-fire" id="streakFireText">🔥 0 dias seguidos</span>
+          <span class="streak-goal" id="streakGoalText">🎯 Meta: 0m / 60m</span>
+        </div>
+        <div class="streak-bar-track">
+          <div class="streak-bar-fill" id="streakBarFill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros de Categoria -->
+      <div class="cat-filter-bar" id="catFilterBar">
+        <button class="cat-pill active" onclick="setCategoryFilter('Todas', this)">📋 Todas</button>
+        <button class="cat-pill" onclick="setCategoryFilter('Trabalho', this)">💼 Trabalho</button>
+        <button class="cat-pill" onclick="setCategoryFilter('Pessoal', this)">👤 Pessoal</button>
+        <button class="cat-pill" onclick="setCategoryFilter('Estudos', this)">📚 Estudos</button>
+        <button class="cat-pill" onclick="setCategoryFilter('Geral', this)">📌 Geral</button>
+      </div>
+
       <!-- Voice Recording Card -->
       <div class="voice-card">
         <button class="mic-btn" id="micBtn" onclick="toggleVoiceRecording()">🎙</button>
@@ -642,6 +753,12 @@
       <!-- Barra Inferior de Entrada Manual -->
       <div class="bottom-bar">
         <input type="text" class="task-input" id="manualInput" placeholder="Nova tarefa manual..." onkeypress="if(event.key==='Enter') addManualTask()">
+        <select class="cat-select" id="catSelect">
+          <option value="Geral">📌 Geral</option>
+          <option value="Trabalho">💼 Trabalho</option>
+          <option value="Pessoal">👤 Pessoal</option>
+          <option value="Estudos">📚 Estudos</option>
+        </select>
         <select class="prio-select" id="prioSelect">
           <option value="media">Média</option>
           <option value="alta">Alta</option>
@@ -792,16 +909,93 @@
       return total;
     }
 
+    let selectedCategory = 'Todas';
+
+    function setCategoryFilter(cat, btn) {
+      selectedCategory = cat;
+      document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderTasks();
+    }
+
+    function calculateStreak(tasks) {
+      const activeDates = new Set();
+      tasks.forEach(t => {
+        if (t.completed && (t.completed_at || t.created_at)) {
+          activeDates.add((t.completed_at || t.created_at).slice(0, 10));
+        } else if (getElapsedSeconds(t) > 30 && t.created_at) {
+          activeDates.add(t.created_at.slice(0, 10));
+        }
+      });
+      if (activeDates.size === 0) return 0;
+
+      const formatDate = (d) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      };
+
+      let cur = new Date();
+      let curStr = formatDate(cur);
+
+      if (!activeDates.has(curStr)) {
+        cur.setDate(cur.getDate() - 1);
+        curStr = formatDate(cur);
+        if (!activeDates.has(curStr)) return 0;
+      }
+
+      let streak = 0;
+      while (activeDates.has(curStr)) {
+        streak++;
+        cur.setDate(cur.getDate() - 1);
+        curStr = formatDate(cur);
+      }
+      return streak;
+    }
+
     function renderTasks() {
       const pendingList = document.getElementById('tasksList');
       const completedList = document.getElementById('completedList');
       const compSection = document.getElementById('compSectionBar');
 
-      const pending = currentTasks.filter(t => !t.completed);
-      const completed = currentTasks.filter(t => t.completed);
+      // 1. Atualiza Banner de Gamificação
+      const streak = calculateStreak(currentTasks);
+      const fireEl = document.getElementById('streakFireText');
+      if (fireEl) {
+        fireEl.textContent = streak > 0 ? `🔥 ${streak} ${streak === 1 ? 'dia' : 'dias'} seguidos!` : `🔥 Comece seu foco hoje!`;
+      }
+      
+      let todaySec = 0;
+      const todayStr = new Date().toISOString().slice(0, 10);
+      currentTasks.forEach(t => {
+        if ((t.created_at && t.created_at.startsWith(todayStr)) || t.timer_running) {
+          todaySec += getElapsedSeconds(t);
+        }
+      });
+      const goalMin = 60;
+      const pct = Math.min(100, Math.round((todaySec / (goalMin * 60)) * 100));
+      const goalEl = document.getElementById('streakGoalText');
+      if (goalEl) {
+        goalEl.textContent = `🎯 Hoje: ${formatDuration(todaySec)} / ${goalMin}m (${pct}%)`;
+      }
+      const fillEl = document.getElementById('streakBarFill');
+      if (fillEl) {
+        fillEl.style.width = pct + '%';
+      }
 
-      document.getElementById('pendingHeader').textContent = `A FAZER (${pending.length})`;
-      document.getElementById('completedHeader').textContent = `CONCLUÍDAS (${completed.length})`;
+      // 2. Filtra por Categoria
+      let pending = currentTasks.filter(t => !t.completed);
+      let completed = currentTasks.filter(t => t.completed);
+
+      if (selectedCategory && selectedCategory !== 'Todas') {
+        pending = pending.filter(t => (t.category || 'Geral').toLowerCase() === selectedCategory.toLowerCase());
+        completed = completed.filter(t => (t.category || 'Geral').toLowerCase() === selectedCategory.toLowerCase());
+      }
+
+      const catSuffix = selectedCategory !== 'Todas' ? ` • ${selectedCategory}` : '';
+      document.getElementById('pendingHeader').textContent = `A FAZER (${pending.length})${catSuffix}`;
+      document.getElementById('completedHeader').textContent = `CONCLUÍDAS (${completed.length})${catSuffix}`;
 
       // Render A Fazer
       if (pending.length === 0) {
@@ -812,6 +1006,7 @@
           const isRunning = !!t.timer_running;
           const stopwatchText = isRunning ? `⏸ ${formatStopwatch(elapsed)}` : (elapsed > 0 ? `▶ Continuar (${formatStopwatch(elapsed)})` : `▶ Iniciar`);
           const timerClass = isRunning ? 'focus-btn running' : 'focus-btn';
+          const catName = t.category || 'Geral';
 
           return `
             <div class="task-card" id="card-${t.id}">
@@ -819,8 +1014,9 @@
               <div class="task-body">
                 <div class="task-title">${escapeHtml(t.title)}</div>
                 <div class="task-meta-row">
+                  <span class="cat-badge cat-${escapeHtml(catName)}">${escapeHtml(catName)}</span>
                   <span class="prio-badge prio-${t.priority || 'media'}">${(t.priority || 'media').toUpperCase()}</span>
-                  ${t.due_time ? `<span class="time-badge">🕒 ${escapeHtml(t.due_time)}</span>` : ''}
+                  ${t.due_time ? `<span class="time-badge">⏰ ${escapeHtml(t.due_time)}</span>` : ''}
                   <button class="${timerClass}" onclick="toggleTimer('${t.id}')">${stopwatchText}</button>
                 </div>
               </div>
@@ -836,18 +1032,22 @@
         completedList.innerHTML = '';
       } else {
         compSection.style.display = 'flex';
-        completedList.innerHTML = completed.map(t => `
-          <div class="task-card completed">
-            <input type="checkbox" class="task-checkbox" checked onchange="toggleTask('${t.id}')">
-            <div class="task-body">
-              <div class="task-title">${escapeHtml(t.title)}</div>
-              <div class="task-meta-row">
-                ${t.completed_duration ? `<span class="duration-tag">⏱️ Feito em ${escapeHtml(t.completed_duration)}</span>` : ''}
+        completedList.innerHTML = completed.map(t => {
+          const catName = t.category || 'Geral';
+          return `
+            <div class="task-card completed">
+              <input type="checkbox" class="task-checkbox" checked onchange="toggleTask('${t.id}')">
+              <div class="task-body">
+                <div class="task-title">${escapeHtml(t.title)}</div>
+                <div class="task-meta-row">
+                  <span class="cat-badge cat-${escapeHtml(catName)}">${escapeHtml(catName)}</span>
+                  ${t.completed_duration ? `<span class="duration-tag">⏱️ Feito em ${escapeHtml(t.completed_duration)}</span>` : ''}
+                </div>
               </div>
+              <button class="del-btn" onclick="deleteTask('${t.id}')">✕</button>
             </div>
-            <button class="del-btn" onclick="deleteTask('${t.id}')">✕</button>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       }
     }
 
@@ -874,6 +1074,7 @@
       if (!title) return;
 
       const priority = document.getElementById('prioSelect').value;
+      const category = document.getElementById('catSelect')?.value || 'Geral';
       const id = 't' + (Date.now() % 10000);
 
       const newTask = {
@@ -881,8 +1082,11 @@
         title,
         completed: false,
         priority,
+        category,
         due_time: null,
+        reminded: false,
         created_at: new Date().toISOString(),
+        completed_at: null,
         timer_running: false,
         timer_started_at: null,
         elapsed_seconds: 0,
@@ -891,7 +1095,7 @@
 
       input.value = '';
       await tasksCol.doc(id).set(newTask);
-      showFeedback("Tarefa adicionada!");
+      showFeedback(`Tarefa adicionada em ${category}!`);
     }
 
     async function toggleTask(id) {
@@ -910,11 +1114,13 @@
         }
         updates.timer_running = false;
         updates.timer_started_at = null;
+        updates.completed_at = new Date().toISOString();
         if (total > 0) updates.completed_duration = formatDuration(total);
         showFeedback(updates.completed_duration ? `🎉 Feito em ${updates.completed_duration}!` : "Tarefa concluída!");
       } else {
         updates.timer_running = false;
         updates.timer_started_at = null;
+        updates.completed_at = null;
         showFeedback("Tarefa reaberta!");
       }
 
@@ -1069,15 +1275,23 @@ Analise a transcrição de voz do usuário e o estado atual das tarefas. Retorne
   "task_id": "string com o id caso a ação seja toggle ou delete, senão null",
   "task_title": "título normalizado da tarefa (sem comandos de voz redundantes)",
   "priority": "baixa" | "media" | "alta",
-  "due_time": "horário ou data extraída caso mencionada, senão null",
+  "category": "Trabalho" | "Pessoal" | "Estudos" | "Geral",
+  "due_time": "horário no formato HH:MM (ex: 15:30) caso mencionado, senão null",
   "feedback_message": "frase curta (máx 5 palavras) confirmando a ação"
-}`;
+}
+
+Diretrizes para 'category':
+- "Trabalho": reuniões, clientes, relatórios, projetos profissionais, GEL, escritório, etc.
+- "Pessoal": compras, casa, remédio, treino, academia, família, contas, etc.
+- "Estudos": cursos, aulas, provas, livros, faculdade, etc.
+- "Geral": tarefas genéricas.`;
 
         const tasksContext = currentTasks.map(t => ({
           id: t.id,
           title: t.title,
           completed: t.completed,
           priority: t.priority,
+          category: t.category || 'Geral',
           due_time: t.due_time
         }));
 
@@ -1105,13 +1319,20 @@ Analise a transcrição de voz do usuário e o estado atual das tarefas. Retorne
         // Executa a ação no Firebase
         if (parsed.action === 'add' && parsed.task_title) {
           const id = 't' + (Date.now() % 10000);
+          const rawCat = (parsed.category || 'Geral').trim();
+          const validCats = ['Trabalho', 'Pessoal', 'Estudos', 'Geral'];
+          const normCat = validCats.find(c => c.toLowerCase() === rawCat.toLowerCase()) || 'Geral';
+
           await tasksCol.doc(id).set({
             id,
             title: parsed.task_title,
             completed: false,
             priority: parsed.priority || 'media',
+            category: normCat,
             due_time: parsed.due_time || null,
+            reminded: false,
             created_at: new Date().toISOString(),
+            completed_at: null,
             timer_running: false,
             timer_started_at: null,
             elapsed_seconds: 0,
@@ -1145,6 +1366,51 @@ Analise a transcrição de voz do usuário e o estado atual das tarefas. Retorne
         sub.textContent = 'Toque no mic para falar um comando';
       }
     }
+
+    // ==================== 5.5 Alarme Sonoro & Notificações de Lembrete ====================
+    function playChime() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.85);
+      } catch(e) {}
+    }
+
+    if ('Notification' in window && Notification.permission === 'default') {
+      document.body.addEventListener('click', () => {
+        Notification.requestPermission();
+      }, { once: true });
+    }
+
+    // Checagem de lembretes a cada 15 segundos
+    setInterval(() => {
+      const nowStr = new Date().toTimeString().slice(0, 5); // "HH:MM"
+      currentTasks.forEach(t => {
+        if (!t.completed && t.due_time && !t.reminded) {
+          if (t.due_time === nowStr || t.due_time.endsWith(nowStr)) {
+            t.reminded = true;
+            tasksCol.doc(t.id).update({ reminded: true }).catch(() => {});
+            playChime();
+            showFeedback(`⏰ LEMBRETE: ${t.title}!`);
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification("⏰ Lembrete • Voice Tasks", {
+                body: t.title,
+                icon: "icon-192.png"
+              });
+            }
+          }
+        }
+      });
+    }, 15000);
 
     // ==================== 6. PWA & UI Utilities ====================
     let deferredPrompt = null;

@@ -45,6 +45,7 @@ class AppWindow(ctk.CTk):
         self._rms_timer = None
         self._stopwatch_timer = None
         self._card_widgets = []
+        self.selected_category = "Todas"
 
         # Tamanho de Fonte Configurável & Persistente
         self.font_size = self._load_font_setting()
@@ -59,8 +60,9 @@ class AppWindow(ctk.CTk):
         self._refresh_tasks_view()
         self._update_status_ui("ready")
 
-        # Inicia loop do cronômetro em tempo real
+        # Inicia loops em tempo real (cronômetro e lembretes)
         self._start_stopwatch_loop()
+        self.after(5000, self._check_reminders)
 
     def _build_ui(self):
         # 1. Header Superior (Barra Minimalista)
@@ -135,6 +137,66 @@ class AppWindow(ctk.CTk):
         )
         self.tab_nav.set("📋 Minhas Tarefas")
         self.tab_nav.pack(fill="x", padx=14, pady=(2, 4))
+
+        # 2.1 Banner de Gamificação & Streaks
+        self.streak_card = ctk.CTkFrame(
+            self,
+            fg_color="#181922",
+            border_width=1,
+            border_color="#2b2d3d",
+            corner_radius=10
+        )
+        self.streak_card.pack(fill="x", padx=14, pady=(2, 4))
+
+        streak_content = ctk.CTkFrame(self.streak_card, fg_color="transparent")
+        streak_content.pack(fill="x", padx=10, pady=(6, 2))
+
+        self.streak_label = ctk.CTkLabel(
+            streak_content,
+            text="🔥 0 dias seguidos",
+            font=("Segoe UI", 11, "bold"),
+            text_color="#f59e0b"
+        )
+        self.streak_label.pack(side="left")
+
+        self.goal_label = ctk.CTkLabel(
+            streak_content,
+            text="🎯 Meta: 0m / 60m",
+            font=("Segoe UI", 10),
+            text_color=THEME["text_muted"]
+        )
+        self.goal_label.pack(side="right")
+
+        self.goal_bar = ctk.CTkProgressBar(
+            self.streak_card,
+            height=4,
+            corner_radius=2,
+            fg_color="#101116",
+            progress_color=THEME["accent"]
+        )
+        self.goal_bar.set(0.0)
+        self.goal_bar.pack(fill="x", padx=10, pady=(0, 6))
+
+        # 2.2 Barra de Filtro de Categorias Rápido
+        self.category_bar = ctk.CTkFrame(self, fg_color="transparent")
+        self.category_bar.pack(fill="x", padx=14, pady=(2, 4))
+
+        from config import CATEGORIES
+        self.category_buttons = {}
+        for cat_name, cfg in CATEGORIES.items():
+            btn = ctk.CTkButton(
+                self.category_bar,
+                text=f"{cfg['icon']} {cat_name}",
+                font=("Segoe UI", 10, "bold"),
+                height=24,
+                corner_radius=12,
+                fg_color=THEME["accent"] if cat_name == "Todas" else THEME["card_bg"],
+                text_color="#ffffff" if cat_name == "Todas" else THEME["text_secondary"],
+                hover_color=THEME["accent_hover"],
+                command=lambda c=cat_name: self._set_category_filter(c)
+            )
+            btn.pack(side="left", padx=(0, 4))
+            self.category_buttons[cat_name] = btn
 
         # 3. Painel de Gravação de Voz (Voice Bar)
         self.voice_card = ctk.CTkFrame(
@@ -233,12 +295,25 @@ class AppWindow(ctk.CTk):
         self.input_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         self.input_entry.bind("<Return>", lambda event: self._manual_add_task())
 
+        self.category_menu = ctk.CTkOptionMenu(
+            bottom_content,
+            values=["Geral", "Trabalho", "Pessoal", "Estudos"],
+            width=82,
+            height=34,
+            font=("Segoe UI", 10),
+            fg_color="#27272a",
+            button_color=THEME["border"],
+            button_hover_color=THEME["accent"]
+        )
+        self.category_menu.set("Geral")
+        self.category_menu.pack(side="left", padx=(0, 4))
+
         self.priority_menu = ctk.CTkOptionMenu(
             bottom_content,
             values=["Média", "Alta", "Baixa"],
-            width=76,
+            width=72,
             height=34,
-            font=("Segoe UI", 11),
+            font=("Segoe UI", 10),
             fg_color="#27272a",
             button_color=THEME["border"],
             button_hover_color=THEME["accent"]
@@ -262,12 +337,16 @@ class AppWindow(ctk.CTk):
         """Alterna entre as abas de Tarefas e Relatórios."""
         if "Tarefas" in selected_tab:
             self.reports_container.pack_forget()
-            self.voice_card.pack(fill="x", padx=14, pady=8, after=self.tab_nav)
+            self.streak_card.pack(fill="x", padx=14, pady=(2, 4), after=self.tab_nav)
+            self.category_bar.pack(fill="x", padx=14, pady=(2, 4), after=self.streak_card)
+            self.voice_card.pack(fill="x", padx=14, pady=8, after=self.category_bar)
             self.feedback_banner.pack(fill="x", padx=16, pady=0, after=self.voice_card)
             self.bottom_bar.pack(fill="x", side="bottom")
             self.scroll_container.pack(fill="both", expand=True, padx=10, pady=4, after=self.feedback_banner)
             self._refresh_tasks_view()
         else:
+            self.streak_card.pack_forget()
+            self.category_bar.pack_forget()
             self.voice_card.pack_forget()
             self.scroll_container.pack_forget()
             self.bottom_bar.pack_forget()
@@ -459,16 +538,37 @@ class AppWindow(ctk.CTk):
         for widget in self.scroll_container.winfo_children():
             widget.destroy()
 
+        # 1. Atualiza o Banner de Gamificação (Streaks & Meta de Foco)
+        try:
+            goal_info = self.storage.get_daily_goal_progress()
+            streak = goal_info.get("streak_days", 0)
+            if streak > 0:
+                self.streak_label.configure(text=f"🔥 {streak} {'dia' if streak == 1 else 'dias'} seguidos!")
+            else:
+                self.streak_label.configure(text="🔥 Comece seu foco hoje!")
+
+            pct = goal_info.get("percentage", 0)
+            self.goal_label.configure(text=f"🎯 Hoje: {goal_info['today_formatted']} / {goal_info['goal_minutes']}m ({pct}%)")
+            self.goal_bar.set(min(1.0, pct / 100.0))
+        except Exception:
+            pass
+
         pending_tasks = self.storage.get_pending_tasks()
         completed_tasks = self.storage.get_completed_tasks()
+
+        # Filtra por categoria caso uma categoria específica esteja selecionada
+        if self.selected_category and self.selected_category != "Todas":
+            pending_tasks = [t for t in pending_tasks if str(t.get("category", "Geral")).lower() == self.selected_category.lower()]
+            completed_tasks = [t for t in completed_tasks if str(t.get("category", "Geral")).lower() == self.selected_category.lower()]
 
         # Cabeçalho da Seção "A Fazer"
         pend_header = ctk.CTkFrame(self.scroll_container, fg_color="transparent")
         pend_header.pack(fill="x", pady=(2, 6))
 
+        cat_suffix = f" • {self.selected_category}" if self.selected_category != "Todas" else ""
         pend_title = ctk.CTkLabel(
             pend_header,
-            text=f"A FAZER  ({len(pending_tasks)})",
+            text=f"A FAZER  ({len(pending_tasks)}){cat_suffix}",
             font=("Segoe UI", 11, "bold"),
             text_color=THEME["text_secondary"]
         )
@@ -588,6 +688,33 @@ class AppWindow(ctk.CTk):
             pass
         self._stopwatch_timer = self.after(1000, self._start_stopwatch_loop)
 
+    def _set_category_filter(self, category: str):
+        """Filtra as tarefas exibidas por categoria selecionada."""
+        self.selected_category = category
+        for cat_name, btn in getattr(self, "category_buttons", {}).items():
+            if cat_name == category:
+                btn.configure(fg_color=THEME["accent"], text_color="#ffffff")
+            else:
+                btn.configure(fg_color=THEME["card_bg"], text_color=THEME["text_secondary"])
+        self._refresh_tasks_view()
+
+    def _check_reminders(self):
+        """Verifica se há lembretes agendados para o horário atual."""
+        try:
+            due_tasks = self.storage.get_due_reminders()
+            for t in due_tasks:
+                try:
+                    import winsound
+                    winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                except Exception:
+                    pass
+                self.storage.mark_reminded(t["id"])
+                self.show_feedback(f"⏰ LEMBRETE: {t['title']}!", is_error=False)
+                self._refresh_tasks_view()
+        except Exception:
+            pass
+        self.after(15000, self._check_reminders)
+
     def _manual_add_task(self):
         title = self.input_entry.get().strip()
         if not title:
@@ -595,11 +722,12 @@ class AppWindow(ctk.CTk):
         
         priority_map = {"Média": "media", "Alta": "alta", "Baixa": "baixa"}
         selected_prio = priority_map.get(self.priority_menu.get(), "media")
+        selected_cat = self.category_menu.get() if hasattr(self, "category_menu") else "Geral"
 
-        self.storage.add_task(title=title, priority=selected_prio)
+        self.storage.add_task(title=title, priority=selected_prio, category=selected_cat)
         self.input_entry.delete(0, "end")
         self._refresh_tasks_view()
-        self.show_feedback("Tarefa adicionada!")
+        self.show_feedback(f"Tarefa adicionada em {selected_cat}!")
 
     def _handle_timer_toggle(self, task_id: str):
         updated = self.storage.toggle_timer(task_id)
@@ -665,13 +793,14 @@ class AppWindow(ctk.CTk):
             task_id = result.get("task_id")
             task_title = result.get("task_title", "")
             priority = result.get("priority", "media")
+            category = result.get("category", "Geral")
             due_time = result.get("due_time")
             feedback = result.get("feedback_message", "Comando executado!")
 
             # Executa a ação no Storage
             if action == "add":
                 if task_title:
-                    self.storage.add_task(title=task_title, priority=priority, due_time=due_time)
+                    self.storage.add_task(title=task_title, priority=priority, due_time=due_time, category=category)
             elif action == "toggle_complete":
                 # Tenta por id, ou busca por título correspondente
                 resolved_id = task_id

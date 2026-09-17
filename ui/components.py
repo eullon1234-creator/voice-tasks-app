@@ -26,6 +26,32 @@ class PriorityBadge(ctk.CTkFrame):
         )
         self.label.pack()
 
+class CategoryBadge(ctk.CTkFrame):
+    """Badge indicador de categoria (Trabalho, Pessoal, Estudos, Geral)."""
+    def __init__(self, master, category: str = "Geral", **kwargs):
+        super().__init__(master, corner_radius=8, **kwargs)
+        from config import CATEGORIES
+        cat_name = category.strip().capitalize() if category else "Geral"
+        cfg = CATEGORIES.get(cat_name, CATEGORIES.get("Geral", {"icon": "📌", "color": "#34d399"}))
+        color = cfg.get("color", "#34d399")
+        icon = cfg.get("icon", "📌")
+
+        self.configure(
+            fg_color="#181920",
+            border_color=color,
+            border_width=1
+        )
+        
+        self.label = ctk.CTkLabel(
+            self,
+            text=f"{icon} {cat_name}",
+            font=("Segoe UI", 9, "bold"),
+            text_color=color,
+            padx=5,
+            pady=1
+        )
+        self.label.pack()
+
 class TaskItemCard(ctk.CTkFrame):
     """Card individual de tarefa com checkbox, badge, horário e botão de remoção."""
     def __init__(
@@ -95,25 +121,30 @@ class TaskItemCard(ctk.CTkFrame):
         )
         self.title_label.grid(row=0, column=1, padx=(0, 6), pady=(6, 2), sticky="w")
 
-        # 3. Sublinha: Metadados (Prioridade, Horário e Cronômetro / Tempo Gasto)
+        # 3. Sublinha: Metadados (Categoria, Prioridade, Horário e Cronômetro / Tempo Gasto)
         meta_frame = ctk.CTkFrame(self, fg_color="transparent")
         meta_frame.grid(row=1, column=1, padx=(0, 6), pady=(0, 6), sticky="w")
 
         meta_font_size = max(10, self.font_size - 4)
+
+        # Badge de Categoria
+        cat = task.get("category", "Geral")
+        cat_badge = CategoryBadge(meta_frame, category=cat)
+        cat_badge.pack(side="left", padx=(0, 6))
 
         if not self.completed:
             # Badge de Prioridade
             badge = PriorityBadge(meta_frame, priority=task.get("priority", "media"))
             badge.pack(side="left", padx=(0, 6))
 
-            # Horário / Due Time
+            # Horário / Due Time com destaque se for lembrete
             due_time = task.get("due_time")
             if due_time:
                 time_label = ctk.CTkLabel(
                     meta_frame,
-                    text=f"🕒 {due_time}",
-                    font=("Segoe UI", meta_font_size),
-                    text_color=THEME["text_muted"]
+                    text=f"⏰ {due_time}",
+                    font=("Segoe UI", meta_font_size, "bold" if not task.get("reminded") else "normal"),
+                    text_color="#fbbf24" if not task.get("reminded") else THEME["text_muted"]
                 )
                 time_label.pack(side="left", padx=(0, 6))
 

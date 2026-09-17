@@ -15,9 +15,17 @@ Analise a transcrição de voz do usuário e o estado atual das tarefas. Retorne
   "task_id": "string com o id caso a ação seja toggle ou delete, senão null",
   "task_title": "título normalizado da tarefa (sem comandos de voz redundantes)",
   "priority": "baixa" | "media" | "alta",
-  "due_time": "horário ou data extraída caso mencionada, senão null",
+  "category": "Trabalho" | "Pessoal" | "Estudos" | "Geral",
+  "due_time": "horário no formato HH:MM (ex: 15:30) caso mencionado, senão null",
   "feedback_message": "frase curta (máx 5 palavras) confirmando a ação"
-}"""
+}
+
+Diretrizes para 'category':
+- "Trabalho": reuniões, clientes, relatórios, projetos profissionais, GEL, escritório, etc.
+- "Pessoal": compras, casa, remédio, treino, academia, família, contas pessoais, médico, etc.
+- "Estudos": cursos, aulas, provas, livros, faculdade, etc.
+- "Geral": tarefas genéricas que não pertençam exclusivamente às anteriores.
+"""
 
 class GroqClient:
     def __init__(self, api_key: Optional[str] = None):
@@ -162,11 +170,15 @@ class GroqClient:
             if priority not in {"baixa", "media", "alta"}:
                 priority = "media"
 
+            raw_cat = str(parsed.get("category") or "Geral").strip().capitalize()
+            category = raw_cat if raw_cat in {"Trabalho", "Pessoal", "Estudos", "Geral"} else "Geral"
+
             return {
                 "action": action,
                 "task_id": parsed.get("task_id"),
                 "task_title": parsed.get("task_title") or clean_text,
                 "priority": priority,
+                "category": category,
                 "due_time": parsed.get("due_time"),
                 "feedback_message": parsed.get("feedback_message") or "Comando processado"
             }

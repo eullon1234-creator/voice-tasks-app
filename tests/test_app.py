@@ -75,6 +75,50 @@ class TestTaskStorage(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertEqual(match["title"], "Enviar relatório financeiro")
 
+    def test_task_category_and_filter(self):
+        t1 = self.storage.add_task("Planejamento sprint", category="Trabalho")
+        t2 = self.storage.add_task("Treino de perna", category="Pessoal")
+        t3 = self.storage.add_task("Capítulo 4 de IA", category="Estudos")
+        t4 = self.storage.add_task("Comprar pão")  # Default Geral
+
+        self.assertEqual(t1["category"], "Trabalho")
+        self.assertEqual(t2["category"], "Pessoal")
+        self.assertEqual(t3["category"], "Estudos")
+        self.assertEqual(t4["category"], "Geral")
+
+        trabalho_tasks = self.storage.get_tasks_by_category("Trabalho")
+        self.assertEqual(len(trabalho_tasks), 1)
+        self.assertEqual(trabalho_tasks[0]["title"], "Planejamento sprint")
+
+        all_tasks = self.storage.get_tasks_by_category("Todas")
+        self.assertEqual(len(all_tasks), 4)
+
+    def test_streak_and_daily_goal(self):
+        from datetime import datetime
+        t1 = self.storage.add_task("Tarefa de hoje")
+        self.storage.toggle_task(t1["id"])  # Conclui hoje
+
+        streak = self.storage.calculate_streak()
+        self.assertGreaterEqual(streak, 1)
+
+        goal = self.storage.get_daily_goal_progress(goal_minutes=60)
+        self.assertIn("percentage", goal)
+        self.assertIn("streak_days", goal)
+        self.assertEqual(goal["streak_days"], streak)
+
+    def test_due_reminders(self):
+        from datetime import datetime
+        now_hm = datetime.now().strftime("%H:%M")
+        t = self.storage.add_task("Ligar agora", due_time=now_hm)
+        
+        due = self.storage.get_due_reminders()
+        self.assertEqual(len(due), 1)
+        self.assertEqual(due[0]["id"], t["id"])
+
+        self.storage.mark_reminded(t["id"])
+        due_after = self.storage.get_due_reminders()
+        self.assertEqual(len(due_after), 0)
+
 
 class TestGroqClientMock(unittest.TestCase):
     def setUp(self):

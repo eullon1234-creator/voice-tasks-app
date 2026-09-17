@@ -94,3 +94,14 @@ STATUS_CONFIG = {
         "subtext": "Transcrevendo e interpretando comando..."
     }
 }
+
+# Categorias de Tarefas
+CATEGORIES = {
+    "Todas": {"icon": "📋", "color": "#a1a1aa"},
+    "Trabalho": {"icon": "💼", "color": "#60a5fa"},
+    "Pessoal": {"icon": "👤", "color": "#f472b6"},
+    "Estudos": {"icon": "📚", "color": "#a78bfa"},
+    "Geral": {"icon": "📌", "color": "#34d399"}
+}
+
+DEFAULT_DAILY_GOAL_MINUTES = 60
