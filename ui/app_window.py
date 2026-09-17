@@ -11,6 +11,7 @@ from config import (
 from storage import TaskStorage
 from audio_recorder import AudioRecorder
 from groq_client import GroqClient
+from ai_memory_engine import AIMemoryEngine
 from ui.components import TaskItemCard, PulsingMicButton
 
 class AppWindow(ctk.CTk):
@@ -20,6 +21,7 @@ class AppWindow(ctk.CTk):
         self.storage = storage
         self.recorder = recorder
         self.groq_client = groq_client
+        self.ai_memory = AIMemoryEngine(groq_client=self.groq_client)
 
         # Configurações de Aparência
         ctk.set_appearance_mode("dark")
@@ -124,10 +126,10 @@ class AppWindow(ctk.CTk):
         )
         self.mobile_btn.pack(side="right", padx=(6, 0))
 
-        # 2. Barra de Navegação entre Abas (Tarefas / Relatórios)
+        # 2. Barra de Navegação entre Abas (Tarefas / Relatórios / Copiloto)
         self.tab_nav = ctk.CTkSegmentedButton(
             self,
-            values=["📋 Minhas Tarefas", "📊 Relatórios & Gráficos"],
+            values=["📋 Tarefas", "📊 Relatórios", "💬 Copiloto IA"],
             font=("Segoe UI", 11, "bold"),
             selected_color=THEME["accent"],
             selected_hover_color=THEME["accent_hover"],
@@ -135,7 +137,7 @@ class AppWindow(ctk.CTk):
             unselected_hover_color=THEME["card_hover"],
             command=self._on_tab_change
         )
-        self.tab_nav.set("📋 Minhas Tarefas")
+        self.tab_nav.set("📋 Tarefas")
         self.tab_nav.pack(fill="x", padx=14, pady=(2, 4))
 
         # 2.1 Banner de Gamificação & Streaks
@@ -276,6 +278,10 @@ class AppWindow(ctk.CTk):
             scrollbar_button_hover_color=THEME["accent"]
         )
 
+        # Container da Aba do Copiloto IA (inicia oculto)
+        self.copilot_container = ctk.CTkFrame(self, fg_color="transparent")
+        self._build_copilot_ui()
+
         # 5. Barra Inferior de Entrada Manual Rápida
         self.bottom_bar = ctk.CTkFrame(self, fg_color=THEME["card_bg"], height=52, corner_radius=0)
         self.bottom_bar.pack(fill="x", side="bottom")
@@ -334,9 +340,10 @@ class AppWindow(ctk.CTk):
         self.add_btn.pack(side="left")
 
     def _on_tab_change(self, selected_tab: str):
-        """Alterna entre as abas de Tarefas e Relatórios."""
+        """Alterna entre as abas de Tarefas, Relatórios e Copiloto IA."""
         if "Tarefas" in selected_tab:
             self.reports_container.pack_forget()
+            self.copilot_container.pack_forget()
             self.streak_card.pack(fill="x", padx=14, pady=(2, 4), after=self.tab_nav)
             self.category_bar.pack(fill="x", padx=14, pady=(2, 4), after=self.streak_card)
             self.voice_card.pack(fill="x", padx=14, pady=8, after=self.category_bar)
@@ -344,14 +351,25 @@ class AppWindow(ctk.CTk):
             self.bottom_bar.pack(fill="x", side="bottom")
             self.scroll_container.pack(fill="both", expand=True, padx=10, pady=4, after=self.feedback_banner)
             self._refresh_tasks_view()
-        else:
+        elif "Relatórios" in selected_tab:
             self.streak_card.pack_forget()
             self.category_bar.pack_forget()
             self.voice_card.pack_forget()
             self.scroll_container.pack_forget()
             self.bottom_bar.pack_forget()
+            self.copilot_container.pack_forget()
             self.reports_container.pack(fill="both", expand=True, padx=10, pady=4, after=self.tab_nav)
             self._refresh_reports_view()
+        else:
+            # Copiloto IA
+            self.streak_card.pack_forget()
+            self.category_bar.pack_forget()
+            self.voice_card.pack_forget()
+            self.scroll_container.pack_forget()
+            self.bottom_bar.pack_forget()
+            self.reports_container.pack_forget()
+            self.copilot_container.pack(fill="both", expand=True, padx=10, pady=4, after=self.tab_nav)
+            self._refresh_copilot_view()
 
     def _refresh_reports_view(self):
         """Renderiza os KPIs, Gráficos de Barra e Histórico de Produtividade."""
@@ -470,6 +488,310 @@ class AppWindow(ctk.CTk):
             command=copy_summary
         )
         copy_btn.pack(fill="x", pady=(8, 16))
+
+    def _build_copilot_ui(self):
+        """Constrói a interface da aba Copiloto IA."""
+        # 1. Topo: Título e Botão Cérebro da IA
+        top_bar = ctk.CTkFrame(self.copilot_container, fg_color="transparent")
+        top_bar.pack(fill="x", padx=6, pady=(4, 6))
+
+        title_lbl = ctk.CTkLabel(
+            top_bar,
+            text="💬 Copiloto IA (Memória Viva)",
+            font=("Segoe UI", 12, "bold"),
+            text_color=THEME["text_primary"]
+        )
+        title_lbl.pack(side="left")
+
+        brain_btn = ctk.CTkButton(
+            top_bar,
+            text="🧠 Memória da IA",
+            font=("Segoe UI", 10, "bold"),
+            width=105,
+            height=26,
+            corner_radius=8,
+            fg_color="#1e1b4b",
+            hover_color="#312e81",
+            text_color="#a5b4fc",
+            border_width=1,
+            border_color="#4f46e5",
+            command=self._show_ai_memory_modal
+        )
+        brain_btn.pack(side="right")
+
+        # 2. Card de Insight / Dica do Dia da IA
+        self.copilot_insight_card = ctk.CTkFrame(
+            self.copilot_container,
+            fg_color="#181924",
+            border_width=1,
+            border_color="#2f324d",
+            corner_radius=10
+        )
+        self.copilot_insight_card.pack(fill="x", padx=4, pady=(0, 6))
+
+        in_top = ctk.CTkFrame(self.copilot_insight_card, fg_color="transparent")
+        in_top.pack(fill="x", padx=10, pady=(6, 2))
+
+        in_title = ctk.CTkLabel(in_top, text="✨ INSIGHT DO COPILOTO", font=("Segoe UI", 10, "bold"), text_color="#fbbf24")
+        in_title.pack(side="left")
+
+        self.insight_text_lbl = ctk.CTkLabel(
+            self.copilot_insight_card,
+            text="Analisando suas anotações e hábitos para gerar sua sugestão...",
+            font=("Segoe UI", 11),
+            text_color=THEME["text_primary"],
+            wraplength=340,
+            justify="left"
+        )
+        self.insight_text_lbl.pack(fill="x", padx=10, pady=(2, 6))
+
+        self.insight_action_frame = ctk.CTkFrame(self.copilot_insight_card, fg_color="transparent")
+        self.insight_action_frame.pack(fill="x", padx=10, pady=(0, 6))
+
+        # 3. Lista de Mensagens do Chat Rolável
+        self.chat_scroll = ctk.CTkScrollableFrame(
+            self.copilot_container,
+            fg_color="transparent",
+            scrollbar_button_color=THEME["border"],
+            scrollbar_button_hover_color=THEME["accent"]
+        )
+        self.chat_scroll.pack(fill="both", expand=True, padx=2, pady=4)
+
+        # 4. Barra Inferior de Envio do Chat
+        chat_bar = ctk.CTkFrame(self.copilot_container, fg_color=THEME["card_bg"], height=48, corner_radius=10)
+        chat_bar.pack(fill="x", side="bottom", padx=2, pady=(4, 2))
+
+        cb_content = ctk.CTkFrame(chat_bar, fg_color="transparent")
+        cb_content.pack(fill="x", padx=8, pady=6)
+
+        self.chat_entry = ctk.CTkEntry(
+            cb_content,
+            placeholder_text="Fale com o Copiloto (o que está fazendo, planos)...",
+            font=("Segoe UI", 11),
+            height=34,
+            fg_color="#121214",
+            border_color=THEME["border"],
+            text_color=THEME["text_primary"]
+        )
+        self.chat_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self.chat_entry.bind("<Return>", lambda e: self._send_copilot_message())
+
+        self.chat_mic_btn = ctk.CTkButton(
+            cb_content,
+            text="🎙",
+            width=36,
+            height=34,
+            font=("Segoe UI", 13),
+            fg_color="#27272a",
+            hover_color=THEME["accent"],
+            command=self._copilot_voice_input
+        )
+        self.chat_mic_btn.pack(side="left", padx=(0, 4))
+
+        self.chat_send_btn = ctk.CTkButton(
+            cb_content,
+            text="➤",
+            width=36,
+            height=34,
+            font=("Segoe UI", 13, "bold"),
+            fg_color=THEME["accent"],
+            hover_color=THEME["accent_hover"],
+            command=self._send_copilot_message
+        )
+        self.chat_send_btn.pack(side="left")
+
+    def _refresh_copilot_view(self):
+        """Renderiza as mensagens do chat e atualiza o insight diário."""
+        for w in self.chat_scroll.winfo_children():
+            w.destroy()
+
+        history = self.ai_memory.get_chat_history()
+        if not history:
+            welcome_msg = (
+                "Olá, Eullon! Eu sou seu Copiloto Pessoal de Produtividade.\n\n"
+                "Estou aqui para aprender com você todos os dias: suas rotinas na GEL, seus hábitos e suas metas. "
+                "Pode me contar o que está fazendo, desabafar ou me pedir ajuda para planejar seu dia!"
+            )
+            self._render_chat_bubble("assistant", welcome_msg)
+        else:
+            for item in history[-15:]:
+                self._render_chat_bubble(item["role"], item["content"])
+
+        threading.Thread(target=self._async_load_insight, daemon=True).start()
+
+    def _async_load_insight(self):
+        tasks = self.storage.get_all_tasks()
+        mission = self.ai_memory.generate_daily_mission(tasks)
+        self.after(0, self._display_mission, mission)
+
+    def _display_mission(self, mission: Dict[str, Any]):
+        tip = mission.get("tip", "Tenha um excelente dia de foco!")
+        self.insight_text_lbl.configure(text=tip)
+
+        for w in self.insight_action_frame.winfo_children():
+            w.destroy()
+
+        task = mission.get("task")
+        if task and task.get("title"):
+            accept_btn = ctk.CTkButton(
+                self.insight_action_frame,
+                text=f"➕ Adicionar Sugestão: {task['title']}",
+                font=("Segoe UI", 10, "bold"),
+                height=26,
+                fg_color="#065f46",
+                hover_color="#047857",
+                text_color="#34d399",
+                border_width=1,
+                border_color="#10b981",
+                command=lambda: self._accept_suggested_task(task)
+            )
+            accept_btn.pack(fill="x")
+
+    def _render_chat_bubble(self, role: str, content: str, suggested_task: Optional[Dict[str, Any]] = None):
+        is_user = (role == "user")
+        row = ctk.CTkFrame(self.chat_scroll, fg_color="transparent")
+        row.pack(fill="x", pady=4)
+
+        bubble = ctk.CTkFrame(
+            row,
+            fg_color="#2b2d42" if is_user else "#181924",
+            border_width=1,
+            border_color="#3d405b" if is_user else THEME["border"],
+            corner_radius=12
+        )
+        bubble.pack(side="right" if is_user else "left", padx=8, pady=2)
+
+        lbl = ctk.CTkLabel(
+            bubble,
+            text=content,
+            font=("Segoe UI", 11),
+            text_color="#ffffff" if is_user else THEME["text_primary"],
+            wraplength=260,
+            justify="left"
+        )
+        lbl.pack(padx=10, pady=8)
+
+        if suggested_task and suggested_task.get("title"):
+            st_btn = ctk.CTkButton(
+                bubble,
+                text=f"➕ Criar: {suggested_task['title']}",
+                font=("Segoe UI", 10, "bold"),
+                height=24,
+                fg_color="#065f46",
+                hover_color="#047857",
+                text_color="#34d399",
+                command=lambda: self._accept_suggested_task(suggested_task)
+            )
+            st_btn.pack(fill="x", padx=10, pady=(0, 8))
+
+    def _send_copilot_message(self):
+        text = self.chat_entry.get().strip()
+        if not text:
+            return
+        self.chat_entry.delete(0, "end")
+        self._render_chat_bubble("user", text)
+
+        thinking_row = ctk.CTkFrame(self.chat_scroll, fg_color="transparent")
+        thinking_row.pack(fill="x", pady=4)
+        thinking_bubble = ctk.CTkLabel(
+            thinking_row,
+            text="💭 Pensando com sua memória...",
+            font=("Segoe UI", 10, "italic"),
+            text_color=THEME["text_muted"]
+        )
+        thinking_bubble.pack(side="left", padx=12)
+
+        def worker():
+            current_tasks = self.storage.get_all_tasks()
+            res = self.ai_memory.chat_with_copilot(text, current_tasks)
+            self.after(0, lambda: [thinking_row.destroy(), self._render_chat_bubble("assistant", res["reply"], res.get("suggested_task"))])
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _copilot_voice_input(self):
+        """Gravação de áudio rápida para o chat do Copiloto."""
+        if not self.recorder.is_recording:
+            started = self.recorder.start()
+            if started:
+                self.chat_mic_btn.configure(fg_color=THEME["danger"], text="⏹")
+                self.show_feedback("Gravando para o Copiloto...")
+            else:
+                self.show_feedback("Erro ao acessar microfone", is_error=True)
+        else:
+            self.chat_mic_btn.configure(fg_color="#27272a", text="🎙")
+            wav_bytes = self.recorder.stop()
+            if not wav_bytes:
+                return
+            self.show_feedback("Transcrevendo fala...")
+            def worker():
+                try:
+                    text = self.groq_client.transcribe_audio(wav_bytes)
+                    self.after(0, lambda: [self.chat_entry.delete(0, "end"), self.chat_entry.insert(0, text), self._send_copilot_message()])
+                except Exception as e:
+                    self.after(0, self.show_feedback, f"Erro: {e}", True)
+            threading.Thread(target=worker, daemon=True).start()
+
+    def _accept_suggested_task(self, task_data: Dict[str, Any]):
+        title = task_data.get("title", "")
+        prio = task_data.get("priority", "media")
+        cat = task_data.get("category", "Geral")
+        due = task_data.get("due_time")
+        try:
+            self.storage.add_task(title=title, priority=prio, category=cat, due_time=due)
+            self.show_feedback(f"Tarefa '{title}' adicionada à lista!")
+        except Exception as e:
+            self.show_feedback(str(e), is_error=True)
+
+    def _show_ai_memory_modal(self):
+        """Abre janela com tudo o que a IA já aprendeu sobre o Eullon."""
+        win = ctk.CTkToplevel(self)
+        win.title("🧠 Memória da IA • O que ela sabe sobre você")
+        win.geometry("380x520")
+        win.configure(fg_color=THEME["bg_dark"])
+        win.attributes("-topmost", True)
+
+        scroll = ctk.CTkScrollableFrame(win, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=14, pady=12)
+
+        mem = self.ai_memory.get_memory()
+
+        def make_section(title, icon, items):
+            sec_f = ctk.CTkFrame(scroll, fg_color=THEME["card_bg"], border_width=1, border_color=THEME["border"], corner_radius=10)
+            sec_f.pack(fill="x", pady=6)
+            h = ctk.CTkLabel(sec_f, text=f"{icon} {title}", font=("Segoe UI", 11, "bold"), text_color=THEME["accent"])
+            h.pack(padx=10, pady=(8, 4), anchor="w")
+            if not items:
+                lbl = ctk.CTkLabel(sec_f, text="Ainda aprendendo...", font=("Segoe UI", 10, "italic"), text_color=THEME["text_muted"])
+                lbl.pack(padx=12, pady=(0, 6), anchor="w")
+            else:
+                for it in items:
+                    it_lbl = ctk.CTkLabel(sec_f, text=f"• {it}", font=("Segoe UI", 10), text_color=THEME["text_primary"], wraplength=310, justify="left")
+                    it_lbl.pack(padx=12, pady=2, anchor="w")
+            ctk.CTkFrame(sec_f, height=4, fg_color="transparent").pack()
+
+        make_section("Contexto de Trabalho", "💼", mem.get("work_context", []))
+        make_section("Gostos & Preferências", "⚙️", mem.get("preferences", []))
+        make_section("Hábitos Pessoais", "👤", mem.get("personal_habits", []))
+        make_section("Metas & Objetivos", "🎯", mem.get("goals", []))
+
+        def add_fact():
+            dialog = ctk.CTkInputDialog(text="O que você quer ensinar para a IA sobre você?", title="Ensinar Novo Fato")
+            new_fact = dialog.get_input()
+            if new_fact and new_fact.strip():
+                self.ai_memory.add_fact_manually("preferences", new_fact.strip())
+                win.destroy()
+                self.show_feedback("Novo fato aprendido pela IA!")
+
+        add_btn = ctk.CTkButton(
+            scroll,
+            text="＋ Ensinar Novo Fato para a IA",
+            font=("Segoe UI", 11, "bold"),
+            height=34,
+            fg_color=THEME["accent"],
+            hover_color=THEME["accent_hover"],
+            command=add_fact
+        )
+        add_btn.pack(fill="x", pady=(10, 8))
 
     def _toggle_always_on_top(self):
         self.always_on_top = not self.always_on_top

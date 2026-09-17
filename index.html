@@ -663,6 +663,103 @@
       height: 38px;
       outline: none;
     }
+
+    /* Copiloto IA Mobile */
+    .copilot-insight-box {
+      background: #181924;
+      border: 1px solid #2f324d;
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+    }
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      max-height: calc(100vh - 280px);
+      padding-bottom: 14px;
+    }
+    .chat-bubble {
+      max-width: 82%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 13px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: #2b2d42;
+      border: 1px solid #3d405b;
+      color: #ffffff;
+      border-bottom-right-radius: 2px;
+    }
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-bottom-left-radius: 2px;
+    }
+    .chat-action-btn {
+      display: inline-block;
+      margin-top: 8px;
+      background: #065f46;
+      color: #34d399;
+      border: 1px solid #10b981;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .chat-bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      background: #15161e;
+      border-top: 1px solid var(--border);
+      padding: 10px 12px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      z-index: 40;
+    }
+    .chat-mic-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #27272a;
+      color: #fff;
+      border: 1px solid var(--border);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .chat-mic-btn.recording {
+      background: var(--danger);
+      animation: pulse 1s infinite alternate;
+    }
+    .chat-send-btn {
+      width: 42px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
@@ -688,8 +785,9 @@
 
     <!-- Abas de Navegação -->
     <div class="tabs-bar">
-      <button class="tab-btn active" id="tabTasksBtn" onclick="switchTab('tasks')">📋 Minhas Tarefas</button>
-      <button class="tab-btn" id="tabReportsBtn" onclick="switchTab('reports')">📊 Relatórios & Gráficos</button>
+      <button class="tab-btn active" id="tabTasksBtn" onclick="switchTab('tasks')">📋 Tarefas</button>
+      <button class="tab-btn" id="tabReportsBtn" onclick="switchTab('reports')">📊 Relatórios</button>
+      <button class="tab-btn" id="tabCopilotBtn" onclick="switchTab('copilot')">💬 Copiloto IA</button>
     </div>
 
     <!-- ABA 1: TAREFAS -->
@@ -812,6 +910,47 @@
       </button>
     </div>
 
+    <!-- ABA 3: COPILOTO IA (MEMÓRIA VIVA) -->
+    <div id="tabCopilotView" style="display: none; flex-direction: column; flex: 1; padding: 12px 14px 76px;">
+      <!-- Topo do Copiloto -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-size: 13px; font-weight: 700;">💬 Copiloto Pessoal</span>
+        <button class="pill-btn" style="background: #1e1b4b; border-color: #4f46e5; color: #a5b4fc;" onclick="openMemoryModal()">🧠 Memória da IA</button>
+      </div>
+
+      <!-- Card de Insight Diário -->
+      <div class="copilot-insight-box">
+        <div style="font-size: 10px; font-weight: 800; color: #fbbf24; margin-bottom: 4px;">✨ INSIGHT DO COPILOTO</div>
+        <div id="copilotInsightText" style="font-size: 12px; line-height: 1.4; color: var(--text);">Analisando suas rotinas e histórico...</div>
+        <div id="copilotInsightAction" style="margin-top: 8px;"></div>
+      </div>
+
+      <!-- Container Rolável de Mensagens do Chat -->
+      <div class="chat-container" id="chatContainer"></div>
+
+      <!-- Barra Inferior de Envio do Chat -->
+      <div class="chat-bottom-bar">
+        <input type="text" class="task-input" id="chatInput" placeholder="Fale com o Copiloto (o que gosta, rotinas)..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+        <button class="chat-mic-btn" id="chatMicBtn" onclick="toggleChatMic()">🎙</button>
+        <button class="chat-send-btn" onclick="sendChatMessage()">➤</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal de Memória da IA -->
+  <div class="modal-overlay" id="memoryModal">
+    <div class="modal-card" style="max-height: 80vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="font-size: 15px;">🧠 Cérebro & Memória da IA</h3>
+        <button class="pill-btn" onclick="closeMemoryModal()">✕</button>
+      </div>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">
+        Tudo o que a IA já aprendeu sobre você no seu notebook, celular e rotinas:
+      </p>
+      <div id="memorySectionsContainer"></div>
+      <button class="pill-btn" style="width: 100%; margin-top: 14px; background: var(--accent); color: #fff; padding: 10px; font-size: 12px;" onclick="promptAddMemoryFact()">＋ Ensinar Novo Fato para a IA</button>
+    </div>
   </div>
 
   <!-- Modal de Chave de API Groq -->
@@ -1472,21 +1611,35 @@ Diretrizes para 'category':
       currentTab = tab;
       const tabTasksView = document.getElementById('tabTasksView');
       const tabReportsView = document.getElementById('tabReportsView');
+      const tabCopilotView = document.getElementById('tabCopilotView');
       const btnTasks = document.getElementById('tabTasksBtn');
       const btnReports = document.getElementById('tabReportsBtn');
+      const btnCopilot = document.getElementById('tabCopilotBtn');
 
       if (tab === 'tasks') {
         tabTasksView.style.display = 'block';
         tabReportsView.style.display = 'none';
+        if (tabCopilotView) tabCopilotView.style.display = 'none';
         btnTasks.classList.add('active');
         btnReports.classList.remove('active');
+        if (btnCopilot) btnCopilot.classList.remove('active');
         renderTasks();
-      } else {
+      } else if (tab === 'reports') {
         tabTasksView.style.display = 'none';
         tabReportsView.style.display = 'flex';
+        if (tabCopilotView) tabCopilotView.style.display = 'none';
         btnTasks.classList.remove('active');
         btnReports.classList.add('active');
+        if (btnCopilot) btnCopilot.classList.remove('active');
         renderReports();
+      } else if (tab === 'copilot') {
+        tabTasksView.style.display = 'none';
+        tabReportsView.style.display = 'none';
+        if (tabCopilotView) tabCopilotView.style.display = 'flex';
+        btnTasks.classList.remove('active');
+        btnReports.classList.remove('active');
+        if (btnCopilot) btnCopilot.classList.add('active');
+        renderCopilot();
       }
     }
 
@@ -1605,6 +1758,412 @@ Diretrizes para 'category':
       }).catch(() => {
         showFeedback("Relatório gerado!");
       });
+    }
+
+    // ==================== 8. Copiloto IA & Memória Cognitiva Viva ====================
+    let aiMemory = {
+      profile: {
+        name: "Eullon",
+        company: "GEL",
+        role: "Profissional",
+        focus_areas: ["Organização", "Eficiência", "Produtividade"]
+      },
+      work_context: [
+        "Trabalha na empresa GEL",
+        "Costuma gerenciar tarefas operacionais e reuniões com equipe"
+      ],
+      personal_preferences: [
+        "Prefere respostas diretas, motivadoras e estruturadas",
+        "Gosta de acompanhar tarefas concluídas no dia a dia"
+      ],
+      habits: [
+        "Utiliza comando de voz para agilidade",
+        "Foco em horários e prioridades bem definidas"
+      ],
+      goals: [
+        "Manter alta produtividade diária sem estresse",
+        "Fechar todas as tarefas de alta prioridade pontualmente"
+      ],
+      notes: []
+    };
+
+    const memoryDocRef = db.collection("ai_profile").doc("eullon_memory");
+
+    // Sincronização em tempo real da Memória com Firestore
+    memoryDocRef.onSnapshot((doc) => {
+      if (doc.exists) {
+        aiMemory = doc.data();
+        if (document.getElementById('memoryModal').classList.contains('active')) {
+          renderMemoryModal();
+        }
+      } else {
+        memoryDocRef.set(aiMemory).catch(err => console.warn("Erro ao iniciar memória:", err));
+      }
+    }, (err) => {
+      console.warn("Firestore ai_profile sync error:", err);
+    });
+
+    let copilotChat = JSON.parse(localStorage.getItem('vt_copilot_chat') || '[]');
+    if (copilotChat.length === 0) {
+      copilotChat.push({
+        role: 'assistant',
+        content: 'Olá, Eullon! Sou seu Copiloto inteligente. Já sei sobre o seu trabalho na GEL e estou aprendendo seus hábitos todos os dias. Como posso te ajudar hoje?'
+      });
+    }
+
+    function renderCopilot() {
+      const container = document.getElementById('chatContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      copilotChat.forEach(msg => {
+        renderChatBubble(msg.role, msg.content);
+      });
+      container.scrollTop = container.scrollHeight;
+
+      updateCopilotInsight();
+    }
+
+    function renderChatBubble(role, content) {
+      const container = document.getElementById('chatContainer');
+      if (!container) return;
+
+      const bubble = document.createElement('div');
+      bubble.className = `chat-bubble ${role}`;
+
+      const taskMatch = content.match(/\[CRIAR_TAREFA:\s*([^\]|]+)(?:\|\s*([^\]|]+))?(?:\|\s*([^\]|]+))?(?:\|\s*([^\]]+))?\]/);
+      
+      let displayContent = content;
+      let taskBtnHtml = '';
+
+      if (taskMatch) {
+        displayContent = content.replace(taskMatch[0], '').trim();
+        const tTitle = taskMatch[1] ? taskMatch[1].trim() : 'Nova Tarefa';
+        const tPrio = taskMatch[2] ? taskMatch[2].trim() : 'media';
+        const tCat = taskMatch[3] ? taskMatch[3].trim() : 'Trabalho';
+        const tDue = taskMatch[4] ? taskMatch[4].trim() : '';
+
+        taskBtnHtml = `<br><button class="chat-action-btn" onclick="acceptCopilotTask('${escapeHtml(tTitle)}', '${escapeHtml(tPrio)}', '${escapeHtml(tCat)}', '${escapeHtml(tDue)}')">➕ Criar Tarefa: ${escapeHtml(tTitle)}</button>`;
+      }
+
+      bubble.innerHTML = `<div>${escapeHtml(displayContent).replace(/\n/g, '<br>')}</div>` + taskBtnHtml;
+      container.appendChild(bubble);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    let isCopilotSending = false;
+
+    async function sendChatMessage(presetText) {
+      if (isCopilotSending) return;
+      const input = document.getElementById('chatInput');
+      const text = (presetText || input.value || '').trim();
+      if (!text) return;
+      if (!presetText) input.value = '';
+
+      copilotChat.push({ role: 'user', content: text });
+      renderChatBubble('user', text);
+      localStorage.setItem('vt_copilot_chat', JSON.stringify(copilotChat));
+
+      const container = document.getElementById('chatContainer');
+      const typingBubble = document.createElement('div');
+      typingBubble.className = 'chat-bubble assistant';
+      typingBubble.id = 'copilotTyping';
+      typingBubble.textContent = '● Pensando...';
+      container.appendChild(typingBubble);
+      container.scrollTop = container.scrollHeight;
+
+      isCopilotSending = true;
+      const groqKey = localStorage.getItem('vt_groq_key') || defaultGroqKey;
+
+      try {
+        const pendingTasks = currentTasks.filter(t => !t.completed).map(t => `${t.title} [${t.priority}] (${t.category})`);
+        
+        const systemPrompt = `Você é o Copiloto Pessoal Inteligente de Eullon Silva.
+Você é proativo, amigável, altamente focado em produtividade e aprende continuamente sobre a rotina de trabalho na empresa GEL e vida de Eullon.
+
+Perfil e Memória Atual de Eullon:
+${JSON.stringify(aiMemory, null, 2)}
+
+Tarefas Pendentes Atuais:
+${pendingTasks.length ? pendingTasks.join(', ') : 'Nenhuma tarefa pendente no momento'}
+
+Instruções:
+1. Responda em português de forma natural, calorosa e objetiva.
+2. Demonstre que você se lembra do contexto dele (empresa GEL, preferências, horários).
+3. Se fizer sentido sugerir uma tarefa prática para ele adicionar ao app, inclua no final da mensagem a tag:
+   [CRIAR_TAREFA: Título da Tarefa | alta/media/baixa | Trabalho/Pessoal/Estudos/Geral | HH:MM (opcional)]
+4. Seja sempre encorajador e consultivo.`;
+
+        const messages = [
+          { role: 'system', content: systemPrompt }
+        ];
+
+        const recent = copilotChat.slice(-8);
+        recent.forEach(m => {
+          messages.push({ role: m.role, content: m.content });
+        });
+
+        const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${groqKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 600
+          })
+        });
+
+        if (!resp.ok) throw new Error('Falha ao comunicar com o Copiloto.');
+        const data = await resp.json();
+        const reply = data.choices[0].message.content.trim();
+
+        const tEl = document.getElementById('copilotTyping');
+        if (tEl) tEl.remove();
+
+        copilotChat.push({ role: 'assistant', content: reply });
+        localStorage.setItem('vt_copilot_chat', JSON.stringify(copilotChat));
+        renderChatBubble('assistant', reply);
+
+        learnFromConversationInBackground(text, reply, groqKey);
+
+      } catch (err) {
+        console.error(err);
+        const tEl = document.getElementById('copilotTyping');
+        if (tEl) tEl.remove();
+        renderChatBubble('assistant', '⚠️ Tive um probleminha ao conectar. Verifique sua chave de API Groq.');
+      } finally {
+        isCopilotSending = false;
+      }
+    }
+
+    async function learnFromConversationInBackground(userMsg, assistantMsg, apiKey) {
+      if (!apiKey) return;
+      try {
+        const learnPrompt = `Analise a mensagem do usuário (Eullon) e veja se ele revelou novos fatos, preferências, rotinas, pessoas com quem trabalha, ou metas que valem a pena a IA lembrar permanentemente.
+Mensagem do usuário: "${userMsg}"
+Memória atual:
+${JSON.stringify(aiMemory, null, 2)}
+
+Se houver novo aprendizado relevante, retorne APENAS um JSON no formato:
+{
+  "has_new_facts": true,
+  "category": "work_context" | "personal_preferences" | "habits" | "goals" | "notes",
+  "fact": "Descrição concisa do fato aprendido sobre Eullon"
+}
+Caso não haja nenhum fato novo a aprender, retorne:
+{ "has_new_facts": false }`;
+
+        const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: learnPrompt }],
+            response_format: { type: 'json_object' },
+            temperature: 0.1
+          })
+        });
+
+        if (!resp.ok) return;
+        const resJson = await resp.json();
+        const result = JSON.parse(resJson.choices[0].message.content);
+
+        if (result.has_new_facts && result.fact && result.category && aiMemory[result.category]) {
+          if (!aiMemory[result.category].includes(result.fact)) {
+            aiMemory[result.category].push(result.fact);
+            await memoryDocRef.set(aiMemory, { merge: true });
+            console.log("IA aprendeu novo fato:", result.fact);
+            showFeedback("🧠 A IA aprendeu algo novo sobre você!");
+          }
+        }
+      } catch (e) {
+        console.warn("Background learning notice:", e);
+      }
+    }
+
+    function updateCopilotInsight() {
+      const insightEl = document.getElementById('copilotInsightText');
+      const actionEl = document.getElementById('copilotInsightAction');
+      if (!insightEl) return;
+
+      const pending = currentTasks.filter(t => !t.completed);
+      if (pending.length === 0) {
+        insightEl.innerHTML = `Você está com todas as tarefas em dia! Excelente trabalho na GEL. Que tal planejar as prioridades de amanhã?`;
+        actionEl.innerHTML = `<button class="chat-action-btn" onclick="sendChatMessage('Gostaria de uma sugestão de meta produtiva para hoje!')">💡 Sugerir Meta</button>`;
+      } else {
+        const top = pending.find(t => t.priority === 'alta') || pending[0];
+        insightEl.innerHTML = `Seu foco principal agora deve ser <b>${escapeHtml(top.title)}</b> (${top.category || 'Geral'}). Lembre-se de fazer pausas curtas para manter o ritmo!`;
+        actionEl.innerHTML = `<button class="chat-action-btn" onclick="sendChatMessage('Como posso resolver a tarefa \\'${escapeHtml(top.title)}\\' mais rápido?')">⚡ Dicas de Execução</button>`;
+      }
+    }
+
+    function openMemoryModal() {
+      renderMemoryModal();
+      document.getElementById('memoryModal').classList.add('active');
+    }
+
+    function closeMemoryModal() {
+      document.getElementById('memoryModal').classList.remove('active');
+    }
+
+    function renderMemoryModal() {
+      const cont = document.getElementById('memorySectionsContainer');
+      if (!cont) return;
+
+      const labels = {
+        work_context: "💼 Trabalho & Empresa GEL",
+        personal_preferences: "⭐ Preferências Pessoais",
+        habits: "⚡ Hábitos & Rotinas",
+        goals: "🎯 Metas & Objetivos",
+        notes: "📝 Anotações Especiais"
+      };
+
+      let html = '';
+      for (const [key, title] of Object.entries(labels)) {
+        const items = aiMemory[key] || [];
+        html += `
+          <div style="margin-bottom: 12px; background: #13141f; padding: 10px; border-radius: 8px; border: 1px solid #23263a;">
+            <div style="font-size: 11px; font-weight: 700; color: #a5b4fc; margin-bottom: 6px;">${title}</div>
+            ${items.length === 0 ? '<div style="font-size: 10px; color: var(--text-muted);">Nenhum dado registrado ainda.</div>' : ''}
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              ${items.map((item, idx) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: #1c1e2e; padding: 5px 8px; border-radius: 6px; font-size: 11px;">
+                  <span>${escapeHtml(item)}</span>
+                  <button onclick="removeMemoryFact('${key}', ${idx})" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 4px;">✕</button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      cont.innerHTML = html;
+    }
+
+    async function removeMemoryFact(category, index) {
+      if (!aiMemory[category]) return;
+      aiMemory[category].splice(index, 1);
+      renderMemoryModal();
+      try {
+        await memoryDocRef.set(aiMemory, { merge: true });
+        showFeedback("Fato removido da memória.");
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function promptAddMemoryFact() {
+      const fact = prompt("O que você gostaria que a IA lembrasse sobre você? (ex: 'Sexta-feira tenho reunião geral às 10h')");
+      if (!fact || !fact.trim()) return;
+
+      if (!aiMemory.work_context) aiMemory.work_context = [];
+      aiMemory.work_context.push(fact.trim());
+      renderMemoryModal();
+
+      try {
+        await memoryDocRef.set(aiMemory, { merge: true });
+        showFeedback("Fato memorizado com sucesso!");
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    let chatMediaRecorder = null;
+    let chatAudioChunks = [];
+    let isChatRecording = false;
+
+    async function toggleChatMic() {
+      const micBtn = document.getElementById('chatMicBtn');
+      const chatInput = document.getElementById('chatInput');
+
+      if (!isChatRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          chatAudioChunks = [];
+          chatMediaRecorder = new MediaRecorder(stream);
+          chatMediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) chatAudioChunks.push(e.data);
+          };
+          chatMediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(chatAudioChunks, { type: 'audio/wav' });
+            micBtn.textContent = '⏳';
+            micBtn.classList.remove('recording');
+            const groqKey = localStorage.getItem('vt_groq_key') || defaultGroqKey;
+            try {
+              const formData = new FormData();
+              formData.append('file', audioBlob, 'voice.wav');
+              formData.append('model', 'whisper-large-v3');
+              formData.append('language', 'pt');
+
+              const sttResp = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${groqKey}` },
+                body: formData
+              });
+              if (sttResp.ok) {
+                const sttData = await sttResp.json();
+                const text = (sttData.text || '').trim();
+                if (text) {
+                  chatInput.value = text;
+                  sendChatMessage(text);
+                }
+              }
+            } catch (e) {
+              console.error(e);
+              showFeedback("Erro ao transcrever áudio.", true);
+            } finally {
+              micBtn.textContent = '🎙';
+            }
+          };
+
+          chatMediaRecorder.start();
+          isChatRecording = true;
+          micBtn.classList.add('recording');
+          micBtn.textContent = '⏹';
+        } catch(err) {
+          console.error(err);
+          showFeedback("Permissão de microfone negada.", true);
+        }
+      } else {
+        isChatRecording = false;
+        micBtn.classList.remove('recording');
+        micBtn.textContent = '🎙';
+        if (chatMediaRecorder && chatMediaRecorder.state !== 'inactive') {
+          chatMediaRecorder.stop();
+          chatMediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+      }
+    }
+
+    async function acceptCopilotTask(title, priority, category, dueTime) {
+      const id = 't' + (Date.now() % 10000);
+      try {
+        await tasksCol.doc(id).set({
+          id,
+          title: title || 'Nova Tarefa',
+          completed: false,
+          priority: (priority || 'media').toLowerCase(),
+          category: category || 'Trabalho',
+          due_time: dueTime || null,
+          reminded: false,
+          created_at: new Date().toISOString(),
+          completed_at: null,
+          timer_running: false,
+          timer_started_at: null,
+          elapsed_seconds: 0,
+          completed_duration: null
+        });
+        showFeedback(`✅ Tarefa adicionada: ${title}`);
+      } catch (err) {
+        console.error(err);
+        showFeedback("Erro ao adicionar tarefa.", true);
+      }
     }
   </script>
 

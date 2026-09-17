@@ -14,4 +14,8 @@ env/
 
 # Temporary test files
 temp_tasks.json
+temp_ai_memory.json
+ai_memory.json
+chat_history.json
 settings.json
+
