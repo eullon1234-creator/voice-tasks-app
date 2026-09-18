@@ -322,19 +322,7 @@ class TaskStorage:
                         t["timer_running"] = False
                         t["timer_started_at"] = None
                     else:
-                        # Se não estiver rodando, pausa outras e inicia esta
-                        for other in self.tasks:
-                            if other.get("timer_running") and other.get("id") != task_id:
-                                if other.get("timer_started_at"):
-                                    try:
-                                        s = datetime.fromisoformat(other["timer_started_at"])
-                                        d = int((datetime.now() - s).total_seconds())
-                                        other["elapsed_seconds"] = other.get("elapsed_seconds", 0) + max(0, d)
-                                    except Exception:
-                                        pass
-                                other["timer_running"] = False
-                                other["timer_started_at"] = None
-
+                        # Inicia cronômetro desta tarefa (permite múltiplas tarefas simultâneas)
                         t["timer_running"] = True
                         t["timer_started_at"] = datetime.now().isoformat()
 

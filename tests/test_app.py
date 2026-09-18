@@ -119,6 +119,29 @@ class TestTaskStorage(unittest.TestCase):
         due_after = self.storage.get_due_reminders()
         self.assertEqual(len(due_after), 0)
 
+    def test_concurrent_timers(self):
+        t1 = self.storage.add_task("Ficar uma hora sem celular")
+        t2 = self.storage.add_task("Fazer as OS das ferramentas")
+
+        # Inicia timer da tarefa 1
+        res1 = self.storage.toggle_timer(t1["id"])
+        self.assertTrue(res1["timer_running"])
+
+        # Inicia timer da tarefa 2 (ambas devem rodar ao mesmo tempo)
+        res2 = self.storage.toggle_timer(t2["id"])
+        self.assertTrue(res2["timer_running"])
+
+        # Verifica se ambas continuam rodando simultaneamente
+        all_tasks = {t["id"]: t for t in self.storage.get_all_tasks()}
+        self.assertTrue(all_tasks[t1["id"]]["timer_running"])
+        self.assertTrue(all_tasks[t2["id"]]["timer_running"])
+
+        # Pausa tarefa 1, tarefa 2 continua rodando
+        self.storage.toggle_timer(t1["id"])
+        all_tasks = {t["id"]: t for t in self.storage.get_all_tasks()}
+        self.assertFalse(all_tasks[t1["id"]]["timer_running"])
+        self.assertTrue(all_tasks[t2["id"]]["timer_running"])
+
 
 class TestGroqClientMock(unittest.TestCase):
     def setUp(self):

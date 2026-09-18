@@ -1284,28 +1284,11 @@
         });
         showFeedback("⏸️ Tarefa pausada.");
       } else {
-        // Iniciar
-        // Pausa outras tarefas ativas
-        const batch = db.batch();
-        currentTasks.forEach(other => {
-          if (other.timer_running && other.id !== id) {
-            let tot = other.elapsed_seconds || 0;
-            if (other.timer_started_at) {
-              const s = new Date(other.timer_started_at).getTime();
-              tot += Math.max(0, Math.floor((Date.now() - s) / 1000));
-            }
-            batch.update(tasksCol.doc(other.id), {
-              timer_running: false,
-              timer_started_at: null,
-              elapsed_seconds: tot
-            });
-          }
-        });
-        batch.update(tasksCol.doc(id), {
+        // Iniciar cronômetro (permite múltiplas tarefas contando tempo simultaneamente)
+        await tasksCol.doc(id).update({
           timer_running: true,
           timer_started_at: new Date().toISOString()
         });
-        await batch.commit();
         showFeedback("⏱️ Foco iniciado! Contando tempo...");
       }
     }
